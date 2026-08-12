@@ -5,6 +5,17 @@ export const redondear = (valor) => {
 
 const precedencia = { '+': 1, '-': 1, '*': 2, '/': 2, '%': 2 };
 
+// Verifica que los paréntesis estén balanceados (evita resultados erróneos silenciosos)
+const parentesisBalanceados = (expr) => {
+    let balance = 0;
+    for (const ch of expr) {
+        if (ch === '(') balance++;
+        else if (ch === ')') balance--;
+        if (balance < 0) return false;
+    }
+    return balance === 0;
+};
+
 // Convierte una expresión infija (A + B) a postfija (A B +)
 const shuntingYard = (tokens) => {
     const salida = [];
@@ -16,10 +27,16 @@ const shuntingYard = (tokens) => {
         } else if (token === '(') {
             operadores.push(token);
         } else if (token === ')') {
-            while (operadores.length > 0 && operadores[operadores.length - 1] !== '(') {
-                salida.push(operadores.pop());
+            let encontrado = false;
+            while (operadores.length > 0) {
+                const op = operadores.pop();
+                if (op === '(') {
+                    encontrado = true;
+                    break;
+                }
+                salida.push(op);
             }
-            operadores.pop(); // Eliminar '('
+            if (!encontrado) throw new Error('Paréntesis desbalanceados.');
         } else {
             while (
                 operadores.length > 0 &&
@@ -42,25 +59,27 @@ const evaluarPostfija = (tokens) => {
         } else {
             const b = pila.pop();
             const a = pila.pop();
+            if (a === undefined || b === undefined) throw new Error('Expresión inválida.');
             switch (token) {
                 case '+': pila.push(a + b); break;
                 case '-': pila.push(a - b); break;
                 case '*': pila.push(a * b); break;
-                case '/': pila.push(a / b); break;
+                case '/': pila.push(b === 0 ? 0 : a / b); break; // Evita división por cero
                 case '%': pila.push(a * (b / 100)); break; // A % B -> A * (B/100)
             }
         }
     }
+    if (pila.length !== 1) throw new Error('Expresión inválida.');
     return pila[0];
 };
 
 export const calcularFormula = (formula, contextoValores) => {
     if (!formula) return 0;
-    
+
     // Reemplazar los tokens por sus valores en el contexto
     let formulaConValores = formula;
     const tokensUtilizados = formula.match(/[A-Z]+/g) || [];
-    
+
     for (const token of tokensUtilizados) {
         const valor = contextoValores[token] || 0;
         // Evitar reemplazar sub-strings (ej: si existe "B" y "BR")
@@ -68,12 +87,42 @@ export const calcularFormula = (formula, contextoValores) => {
         formulaConValores = formulaConValores.replace(regex, valor);
     }
 
+    // Si quedan referencias sin resolver o los paréntesis no cierran, no calcular
+    if (/[A-Z]/.test(formulaConValores)) return 0;
+    if (!parentesisBalanceados(formulaConValores)) return 0;
+
     // Extraer números y operadores permitidos
-    const tokens = formulaConValores.match(/\d+(?:\.\d+)?|[\+\-\*\/\%\(\)]/g);
+    const tokens = formulaConValores.match(/\d+(?:\.\d+)?|[+\-*/%()]/g);
     if (!tokens) return 0;
 
-    const tokensPostfijos = shuntingYard(tokens);
-    const resultadoBruto = evaluarPostfija(tokensPostfijos);
-    
-    return isNaN(resultadoBruto) ? 0 : redondear(resultadoBruto);
+    try {
+        const tokensPostfijos = shuntingYard(tokens);
+        const resultadoBruto = evaluarPostfija(tokensPostfijos);
+        return Number.isFinite(resultadoBruto) ? redondear(resultadoBruto) : 0;
+    } catch {
+        return 0;
+    }
+};
+
+// Calcula los totales de una liquidación según la naturaleza de sus items activos.
+// items: lista de items (con activo y naturaleza).
+// resultados: mapa { id_item: valor }.
+// Se trabaja en centavos enteros para evitar errores de punto flotante en las sumas.
+export const calcularTotales = (items, resultados) => {
+    const aCentavos = (valor) => Math.round((parseFloat(valor) || 0) * 100);
+
+    const sumar = (naturaleza) => items
+        .filter(i => i.activo && i.naturaleza === naturaleza)
+        .reduce((acc, i) => acc + aCentavos(resultados[i.id]), 0);
+
+    const bruto = sumar('SUMA');
+    const descuentos = sumar('RESTA');
+    const informativos = sumar('INFORMATIVO');
+
+    return {
+        bruto: bruto / 100,
+        descuentos: descuentos / 100,
+        informativos: informativos / 100,
+        neto: (bruto - descuentos) / 100
+    };
 };

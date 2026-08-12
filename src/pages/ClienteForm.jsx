@@ -11,7 +11,7 @@ export default function ClienteForm() {
         try {
             await api.post('/entidades/clientes', form);
             setLocation('/clientes');
-        } catch (error) {
+        } catch {
             alert('Error al guardar el cliente');
         }
     };

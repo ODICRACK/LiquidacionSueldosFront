@@ -5,7 +5,7 @@ import api from '../services/api';
 export default function EmpleadoForm({ params }) {
     const { cliente_id } = params;
     const [form, setForm] = useState({ 
-        cuil: '', nombre: '', apellido: '', nro_legajo: '', fecha_ingreso: '', cliente_id 
+        cuil: '', nombre: '', apellido: '', nro_legajo: '', fecha_ingreso: '', cliente_id, sueldo_basico: '' 
     });
     const [, setLocation] = useLocation();
 
@@ -14,7 +14,7 @@ export default function EmpleadoForm({ params }) {
         try {
             await api.post('/entidades/empleados', form);
             setLocation('/clientes');
-        } catch (error) {
+        } catch {
             alert('Error al guardar el empleado');
         }
     };
@@ -44,6 +44,15 @@ export default function EmpleadoForm({ params }) {
                 <div className="form-group">
                     <label>Fecha de Ingreso</label>
                     <input type="date" value={form.fecha_ingreso} onChange={e => setForm({...form, fecha_ingreso: e.target.value})} />
+                </div>
+                <div className="form-group">
+                    <label>Sueldo Básico</label>
+                    <input
+                        type="number" step="0.01" min="0"
+                        value={form.sueldo_basico}
+                        onChange={e => setForm({...form, sueldo_basico: e.target.value})}
+                        placeholder="0.00"
+                    />
                 </div>
                 <div className="acciones-form">
                     <button type="button" onClick={() => setLocation('/clientes')} className="btn-cancelar">Cancelar</button>

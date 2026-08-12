@@ -4,16 +4,19 @@ import api from '../services/api';
 
 export default function ItemForm() {
     const [form, setForm] = useState({
-        nombre: '', token: '', tipo: 'PORCENTAJE', naturaleza: 'SUMA', formula: '', porcentaje: ''
+        nombre: '', token: '', tipo: 'PORCENTAJE', naturaleza: 'SUMA', formula: '', porcentaje: '', base_token: ''
     });
     const [categoriasDisponibles, setCategoriasDisponibles] = useState([]);
     const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState([]); // [{ id, operacion }]
+    const [itemsDisponibles, setItemsDisponibles] = useState([]); // Para el selector de base_token
     const [error, setError] = useState(null);
     const [, setLocation] = useLocation();
 
     useEffect(() => {
         // Cargar las categorías existentes para que el usuario las asigne
         api.get('/categorias').then(res => setCategoriasDisponibles(res.data)).catch(console.error);
+        // Cargar los items existentes para poder elegir la base del porcentaje
+        api.get('/items').then(res => setItemsDisponibles(res.data)).catch(console.error);
     }, []);
 
     const handleCategoriaToggle = (catId) => {
@@ -38,7 +41,10 @@ export default function ItemForm() {
             const payload = { ...form, token: form.token.toUpperCase(), categorias: categoriasSeleccionadas };
             
             // Limpiar datos que no correspondan al tipo según Regla 24
-            if (payload.tipo !== 'PORCENTAJE') payload.porcentaje = null;
+            if (payload.tipo !== 'PORCENTAJE') {
+                payload.porcentaje = null;
+                payload.base_token = null;
+            }
             if (payload.tipo !== 'FORMULA') payload.formula = null;
 
             await api.post('/items', payload);
@@ -84,10 +90,28 @@ export default function ItemForm() {
                 </div>
 
                 {form.tipo === 'PORCENTAJE' && (
-                    <div className="form-group">
-                        <label>Porcentaje Predeterminado (%)</label>
-                        <input type="number" step="0.01" value={form.porcentaje} onChange={e => setForm({...form, porcentaje: e.target.value})} required />
-                    </div>
+                    <>
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>Porcentaje Predeterminado (%)</label>
+                                <input type="number" step="0.01" value={form.porcentaje} onChange={e => setForm({...form, porcentaje: e.target.value})} required />
+                            </div>
+                            <div className="form-group">
+                                <label>Item Base (se calcula sobre el valor de este token)</label>
+                                <select value={form.base_token} onChange={e => setForm({...form, base_token: e.target.value})} required>
+                                    <option value="">— Seleccionar base —</option>
+                                    {itemsDisponibles
+                                        .filter(i => i.token !== form.token.toUpperCase())
+                                        .map(i => (
+                                            <option key={i.id} value={i.token}>
+                                                {i.token} — {i.nombre}
+                                            </option>
+                                        ))}
+                                </select>
+                            </div>
+                        </div>
+                        <small>Ej: "Jubilación" con 11% de BR → resultado = BR × 11 / 100</small>
+                    </>
                 )}
 
                 {form.tipo === 'FORMULA' && (

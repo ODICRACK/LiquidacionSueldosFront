@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'wouter';
 import api from '../services/api';
-import { redondear, calcularFormula } from '../utils/mathEngine';
+import { redondear, calcularFormula, calcularTotales } from '../utils/mathEngine';
+import { abrirReciboPDF } from '../utils/recibo';
 import ModalCopiar from '../components/ModalCopiar';
 
 export default function Liquidacion({ params }) {
@@ -9,28 +9,15 @@ export default function Liquidacion({ params }) {
     const { id } = params;
     const [liquidacion, setLiquidacion] = useState(null);
     const [items, setItems] = useState([]);
-    const [categorias, setCategorias] = useState([]);
     const [valoresCalculados, setValoresCalculados] = useState({});
-    const [, setLocation] = useLocation();
 
     useEffect(() => {
         cargarLiquidacion();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
-    const manejarGeneracionPDF = async () => {
-        try {
-            const response = await api.get(`/liquidaciones/${id}/pdf`, {
-                responseType: 'blob' // Fundamental para recibir el PDF
-            });
-
-            // Crear una URL temporal para el blob y abrirlo en una nueva pestaña
-            const file = new Blob([response.data], { type: 'application/pdf' });
-            const fileURL = URL.createObjectURL(file);
-            window.open(fileURL, '_blank');
-
-        } catch (error) {
-            alert('Error al generar el documento PDF.');
-        }
+    const manejarGeneracionPDF = () => {
+        abrirReciboPDF(id);
     };
     const handleFinalizar = async () => {
         if (!window.confirm('¿Está seguro de finalizar? La liquidación quedará congelada y no podrá modificarse.')) return;
@@ -52,7 +39,6 @@ export default function Liquidacion({ params }) {
             const res = await api.get(`/liquidaciones/${id}`);
             setLiquidacion(res.data);
             setItems(res.data.items);
-            setCategorias(res.data.categorias);
             recalcular(res.data.items);
         } catch (error) {
             console.error('Error al cargar liquidación', error);
@@ -79,13 +65,19 @@ export default function Liquidacion({ params }) {
                 }
 
                 if (item.tipo === 'MANUAL') {
-                    const val = parseFloat(item.valor_ingresado) || 0;
+                    const val = redondear(parseFloat(item.valor_ingresado) || 0);
                     contexto[item.token] = val;
                     resultados[item.id] = val;
                 } else if (item.tipo === 'PORCENTAJE') {
-                    // El porcentaje por sí solo no representa el monto en plata, suele requerir base.
-                    // Si el porcentaje ES el valor, se pasa directo. 
-                    const val = parseFloat(item.porcentaje) || 0;
+                    // El resultado = base × porcentaje / 100 (si tiene base_token)
+                    // Sin base definida, el porcentaje se toma como monto directo (compatibilidad)
+                    if (item.base_token && contexto[item.base_token] === undefined) {
+                        faltantes.push(item);
+                        continue;
+                    }
+                    const porcentaje = parseFloat(item.porcentaje) || 0;
+                    const base = item.base_token ? (contexto[item.base_token] || 0) : 100;
+                    const val = redondear(porcentaje * base / 100);
                     contexto[item.token] = val;
                     resultados[item.id] = val;
                 } else if (item.tipo === 'FORMULA') {
@@ -127,12 +119,15 @@ export default function Liquidacion({ params }) {
                 resultados: valoresCalculados
             });
             alert('Borrador guardado correctamente.');
-        } catch (error) {
+        } catch {
             alert('Error al guardar el borrador.');
         }
     };
 
     if (!liquidacion) return <div>Cargando...</div>;
+
+    const totales = calcularTotales(items, valoresCalculados);
+    const sueldoBasicoItem = items.find(i => i.token === 'SB');
 
     return (
         <div className="liquidacion-contenedor">
@@ -140,6 +135,22 @@ export default function Liquidacion({ params }) {
                 <h2>Liquidación: {liquidacion.mes}/{liquidacion.anio}</h2>
                 <span className={`estado-badge ${liquidacion.estado.toLowerCase()}`}>{liquidacion.estado}</span>
             </header>
+
+            {sueldoBasicoItem && (
+                <div className="sueldo-basico">
+                    <span className="sb-label">Sueldo Básico</span>
+                    <div className="input-grupo">
+                        <input
+                            type="number" step="0.01" min="0"
+                            value={sueldoBasicoItem.valor_ingresado || ''}
+                            disabled={liquidacion.estado === 'FINALIZADA'}
+                            onChange={(e) => handleItemChange(sueldoBasicoItem.id, 'valor_ingresado', e.target.value)}
+                            placeholder="0.00"
+                        />
+                        <small className="base-hint">al guardar el borrador se actualiza en el empleado</small>
+                    </div>
+                </div>
+            )}
 
             <table className="tabla-items-liq">
                 <thead>
@@ -152,7 +163,7 @@ export default function Liquidacion({ params }) {
                     </tr>
                 </thead>
                 <tbody>
-                    {items.map(item => (
+                    {items.filter(i => i.token !== 'SB').map(item => (
                         <tr key={item.id} className={!item.activo ? 'item-inactivo' : ''}>
                             <td>
                                 <input
@@ -186,6 +197,7 @@ export default function Liquidacion({ params }) {
                                             onChange={(e) => handleItemChange(item.id, 'porcentaje', e.target.value)}
                                         />
                                         <span>%</span>
+                                        {item.base_token && <small className="base-hint">de {item.base_token}</small>}
                                     </div>
                                 )}
                                 {item.tipo === 'FORMULA' && <span>{item.formula}</span>}
@@ -197,6 +209,27 @@ export default function Liquidacion({ params }) {
                     ))}
                 </tbody>
             </table>
+
+            <div className="totales-liq">
+                <div className="total-fila">
+                    <span>Sueldo Bruto:</span>
+                    <strong>$ {totales.bruto.toFixed(2)}</strong>
+                </div>
+                <div className="total-fila">
+                    <span>Descuentos:</span>
+                    <strong>-$ {totales.descuentos.toFixed(2)}</strong>
+                </div>
+                {totales.informativos > 0 && (
+                    <div className="total-fila">
+                        <span>Informativos:</span>
+                        <strong>$ {totales.informativos.toFixed(2)}</strong>
+                    </div>
+                )}
+                <div className="total-fila total-neto">
+                    <span>NETO A COBRAR:</span>
+                    <strong>$ {totales.neto.toFixed(2)}</strong>
+                </div>
+            </div>
 
             {liquidacion.estado === 'BORRADOR' && (
                 <div className="acciones-liq">

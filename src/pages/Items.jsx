@@ -41,6 +41,7 @@ export default function Items() {
                         <th>Nombre</th>
                         <th>Tipo</th>
                         <th>Naturaleza</th>
+                        <th>Detalle</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -51,6 +52,14 @@ export default function Items() {
                             <td>{item.nombre}</td>
                             <td>{item.tipo}</td>
                             <td>{item.naturaleza}</td>
+                            <td>
+                                {item.tipo === 'PORCENTAJE' && item.base_token && (
+                                    <small className="token-hint">{item.porcentaje}% de {item.base_token}</small>
+                                )}
+                                {item.tipo === 'FORMULA' && (
+                                    <small className="token-hint">{item.formula}</small>
+                                )}
+                            </td>
                             <td>
                                 <button className="btn-peligro" onClick={() => eliminarItem(item.id)}>Eliminar</button>
                             </td>

@@ -9,7 +9,6 @@ export default function Login() {
     const [, setLocation] = useLocation();
 
     const handleSubmit = async (e) => {
-        console.log("hola")
         e.preventDefault();
         setError(null);
         try {

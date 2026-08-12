@@ -1,4 +1,4 @@
-import './app.css';
+import './App.css';
 
 import { Route, Switch, Redirect, Link } from 'wouter';
 import Login from './pages/Login';
@@ -6,7 +6,6 @@ import Home from './pages/Home';
 import Clientes from './pages/Clientes';
 import ClienteForm from './pages/ClienteForm';
 import EmpleadoForm from './pages/EmpleadoForm';
-import HistorialEmpleado from './pages/HistorialEmpleado';
 import Liquidacion from './pages/Liquidacion';
 import Items from './pages/Items';
 import ItemForm from './pages/ItemForm';
@@ -45,10 +44,6 @@ function App() {
             
             <Route path="/empleado/nuevo/:cliente_id">
                 {params => <ProtectedRoute component={EmpleadoForm} params={params} />}
-            </Route>
-            
-            <Route path="/empleado/:empleado_id">
-                {params => <ProtectedRoute component={HistorialEmpleado} params={params} />}
             </Route>
             
             <Route path="/liquidacion/:id">

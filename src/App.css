@@ -83,7 +83,25 @@ button {
     padding: 8px 16px;
     font-size: 14px;
     font-weight: 500;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, transform 0.1s ease, box-shadow 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    touch-action: manipulation;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+button:active {
+    transform: translateY(1px) scale(0.96);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+button:focus-visible {
+    outline: 2px solid var(--color-secundario);
+    outline-offset: 2px;
 }
 
 .btn-primario {
@@ -243,6 +261,33 @@ input:focus, select:focus {
     font-size: 0.9rem;
 }
 
+.carpeta-header .progreso-mes {
+    margin-left: 15px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 3px 12px;
+    border-radius: 12px;
+    color: #fff;
+    white-space: nowrap;
+}
+
+.progreso-mes.rojo {
+    background-color: #f5222d;
+}
+
+.progreso-mes.amarillo {
+    background-color: #faad14;
+}
+
+.progreso-mes.verde {
+    background-color: #52c41a;
+}
+
+.progreso-mes.neutro {
+    background-color: #d9d9d9;
+    color: #666;
+}
+
 .carpeta-contenido {
     padding: 20px;
     border-top: 1px solid var(--color-borde);
@@ -252,6 +297,141 @@ input:focus, select:focus {
     margin-bottom: 15px;
     display: flex;
     justify-content: flex-end;
+}
+
+/* ==========================================================================
+   ÁRBOL DE EMPLEADOS (CLIENTES)
+   ========================================================================== */
+.empleados-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.empleado-fila {
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio-borde);
+    overflow: hidden;
+}
+
+.empleado-header {
+    padding: 12px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    background-color: #fafafa;
+    transition: background-color 0.2s;
+}
+
+.empleado-header:hover {
+    background-color: #f0f0f0;
+}
+
+.empleado-nombre {
+    font-weight: 600;
+}
+
+.empleado-detalle {
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.anios-lista {
+    display: flex;
+    flex-direction: column;
+}
+
+.anio-bloque {
+    border-top: 1px solid var(--color-borde);
+}
+
+.anio-header {
+    padding: 8px 20px;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--color-secundario);
+    background-color: #fff;
+    transition: background-color 0.2s;
+}
+
+.anio-header:hover {
+    background-color: #f7faff;
+}
+
+.anio-header .icono {
+    display: inline-block;
+    width: 16px;
+}
+
+.meses-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    padding: 12px 20px;
+    background-color: #fff;
+}
+
+.mes-celda {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 6px;
+    border: 1px solid var(--color-borde);
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform 0.1s, box-shadow 0.2s;
+}
+
+.mes-celda:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+    transform: translateY(-1px);
+}
+
+.mes-nombre {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.mes-estado {
+    font-size: 0.72rem;
+    padding: 1px 8px;
+    border-radius: 10px;
+    color: #fff;
+}
+
+.estado-VACIO {
+    background-color: #fff;
+}
+
+.estado-VACIO .mes-estado {
+    background-color: #d9d9d9;
+    color: #666;
+}
+
+.estado-BORRADOR {
+    background-color: #fffbe6;
+    border-color: #faad14;
+}
+
+.estado-BORRADOR .mes-estado {
+    background-color: #faad14;
+}
+
+.estado-FINALIZADA {
+    background-color: #f6ffed;
+    border-color: #52c41a;
+}
+
+.estado-FINALIZADA .mes-estado {
+    background-color: #52c41a;
+}
+
+.historial-lista {
+    margin-top: 30px;
 }
 
 /* ==========================================================================
@@ -296,6 +476,32 @@ input:focus, select:focus {
     border-bottom: 1px solid var(--color-borde);
 }
 
+.sueldo-basico {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    background-color: #f0f5ff;
+    border: 1px solid #adc6ff;
+    border-radius: 8px;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--sombra-caja);
+}
+
+.sueldo-basico .sb-label {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--color-texto);
+}
+
+.sueldo-basico input {
+    width: 180px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-align: right;
+}
+
 .estado-badge {
     padding: 4px 12px;
     border-radius: 12px;
@@ -326,9 +532,40 @@ input:focus, select:focus {
     font-size: 0.85rem;
 }
 
+.base-hint {
+    color: #888;
+    font-size: 0.8rem;
+}
+
 .resultado-celda {
     font-weight: 600;
     text-align: right !important;
+}
+
+.totales-liq {
+    margin-top: 15px;
+    margin-left: auto;
+    width: 320px;
+    border: 1px solid var(--color-borde);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.total-fila {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 14px;
+    font-size: 0.95rem;
+}
+
+.total-fila + .total-fila {
+    border-top: 1px solid var(--color-borde);
+}
+
+.total-neto {
+    background-color: var(--color-secundario);
+    color: #fff;
+    font-size: 1.05rem;
 }
 
 .acciones-liq {
@@ -365,6 +602,18 @@ input:focus, select:focus {
 
 .modal-contenido h3 {
     margin-bottom: 15px;
+}
+
+.aviso-copia {
+    background-color: #f0f5ff;
+    border: 1px solid #adc6ff;
+    border-radius: 6px;
+    padding: 12px;
+    margin: 15px 0;
+}
+
+.aviso-copia p {
+    margin: 0 0 10px;
 }
 
 /* ==========================================================================
