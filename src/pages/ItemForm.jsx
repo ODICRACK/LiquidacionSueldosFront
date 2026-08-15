@@ -5,20 +5,19 @@ import api from '../services/api';
 export default function ItemForm({ params }) {
     const id = params?.id;
     const [form, setForm] = useState({
-        nombre: '', token: '', tipo: 'PORCENTAJE', naturaleza: 'SUMA', formula: '', porcentaje: '', base_token: ''
+        nombre: '', token: '', tipo: 'PORCENTAJE', naturaleza: 'SUMA', formula: '', porcentaje: '', base_token: '',
+        unidad_imprimible: '', base_imprimible: '' // <-- NUEVOS CAMPOS
     });
     const [categoriasDisponibles, setCategoriasDisponibles] = useState([]);
-    const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState([]); // [{ id, operacion }]
+    const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState([]); 
     const [itemsDisponibles, setItemsDisponibles] = useState([]);
     const [error, setError] = useState(null);
     const [, setLocation] = useLocation();
 
     useEffect(() => {
-        // Cargar combos
         api.get('/categorias').then(res => setCategoriasDisponibles(res.data.filter(c => !c.eliminado))).catch(console.error);
         api.get('/items').then(res => setItemsDisponibles(res.data)).catch(console.error);
 
-        // Si hay ID, cargar datos del item a editar
         if (id) {
             api.get(`/items/${id}`).then(res => {
                 const data = res.data;
@@ -29,10 +28,11 @@ export default function ItemForm({ params }) {
                     naturaleza: data.naturaleza,
                     formula: data.formula || '',
                     porcentaje: data.porcentaje || '',
-                    base_token: data.base_token || ''
+                    base_token: data.base_token || '',
+                    unidad_imprimible: data.unidad_imprimible || '',
+                    base_imprimible: data.base_imprimible || ''
                 });
                 
-                // Mapear categorías del formato de BD al del state
                 if (data.categorias) {
                     setCategoriasSeleccionadas(data.categorias.map(c => ({
                         id: c.categoria_id,
@@ -98,7 +98,7 @@ export default function ItemForm({ params }) {
                         required 
                         value={form.token} 
                         onChange={e => setForm({...form, token: e.target.value.toUpperCase()})}
-                        disabled={id && form.token === 'SB'} // Bloquear si es el Sueldo Básico
+                        disabled={id && form.token === 'SB'} 
                     />
                 </div>
 
@@ -115,9 +115,10 @@ export default function ItemForm({ params }) {
                         <label>Naturaleza (Total)</label>
                         <select value={form.naturaleza} onChange={e => setForm({...form, naturaleza: e.target.value})}>
                             <option value="SUMA">Suma (Remunerativo)</option>
+                            <option value="NO_REMUNERATIVO">Suma (No Remunerativo)</option> {/* NUEVA OPCIÓN */}
                             <option value="RESTA">Resta (Descuento)</option>
                             <option value="INFORMATIVO">Informativo</option>
-                            <option value="AUXILIAR">Auxiliar (Solo para fórmulas, no imprime)</option>
+                            <option value="AUXILIAR">Auxiliar (Solo para fórmulas)</option>
                         </select>
                     </div>
                 </div>
@@ -143,7 +144,6 @@ export default function ItemForm({ params }) {
                                 </select>
                             </div>
                         </div>
-                        <small>Ej: "Jubilación" con 11% de BR → resultado = BR × 11 / 100</small>
                     </>
                 )}
 
@@ -154,6 +154,32 @@ export default function ItemForm({ params }) {
                         <small>Operadores permitidos: + - * / % ( )</small>
                     </div>
                 )}
+
+                {/* NUEVA SECCIÓN: CONFIGURACIÓN VISUAL PDF */}
+                <div style={{ marginTop: '30px', padding: '15px', backgroundColor: '#f8f9fa', border: '1px solid #ddd', borderRadius: '5px' }}>
+                    <h4 style={{ marginTop: 0, marginBottom: '15px', color: '#1a3b8a' }}>Configuración Visual para el PDF</h4>
+                    <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '15px' }}>
+                        Escribe exactamente qué quieres que se muestre en las columnas del recibo. Puedes usar texto fijo (Ej: "30") o llamar a un Token para que muestre su valor (Ej: "DIAS_TRAB").
+                    </p>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label>Columna "UNIDAD"</label>
+                            <input 
+                                value={form.unidad_imprimible} 
+                                onChange={e => setForm({...form, unidad_imprimible: e.target.value})} 
+                                placeholder="Ej: 11% , 30 , o token DIAS_TRAB" 
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Columna "BASE"</label>
+                            <input 
+                                value={form.base_imprimible} 
+                                onChange={e => setForm({...form, base_imprimible: e.target.value})} 
+                                placeholder="Ej: token SBRUTO" 
+                            />
+                        </div>
+                    </div>
+                </div>
 
                 <div className="form-group" style={{ marginTop: '20px' }}>
                     <label>Asignación a Categorías (Gráfico)</label>

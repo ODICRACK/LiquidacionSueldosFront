@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
-import { redondear, calcularFormula, calcularTotales } from '../utils/mathEngine';
+import { redondear, calcularFormula } from '../utils/mathEngine';
 import { abrirReciboPDF } from '../utils/recibo';
 import { useReactToPrint } from 'react-to-print';
 import { ReciboPrint } from '../components/ReciboPrint';
@@ -23,16 +23,15 @@ export default function Liquidacion({ params }) {
     const manejarGeneracionPDF = () => {
         abrirReciboPDF(id);
     };
+
     const handleFinalizar = async () => {
         if (!window.confirm('¿Está seguro de finalizar? La liquidación quedará congelada y no podrá modificarse.')) return;
 
         try {
-            // Guardamos el borrador por última vez para asegurar cálculos finales
-            await guardarBorrador();
-
+            await guardarBorradorSilencioso();
             await api.put(`/liquidaciones/${id}/finalizar`);
             alert('Liquidación finalizada correctamente.');
-            cargarLiquidacion(); // Recarga para actualizar el estado a FINALIZADA y bloquear inputs
+            cargarLiquidacion(); 
         } catch (error) {
             alert(error.response?.data?.error || 'Error al finalizar.');
         }
@@ -54,7 +53,6 @@ export default function Liquidacion({ params }) {
         const resultados = {};
         let itemsPendientes = [...itemsActuales];
 
-        // Límite de iteraciones de seguridad (evita bucles infinitos si hay un error no detectado)
         let iteraciones = 0;
         const MAX_ITERACIONES = itemsActuales.length * 2;
 
@@ -73,8 +71,6 @@ export default function Liquidacion({ params }) {
                     contexto[item.token] = val;
                     resultados[item.id] = val;
                 } else if (item.tipo === 'PORCENTAJE') {
-                    // El resultado = base × porcentaje / 100 (si tiene base_token)
-                    // Sin base definida, el porcentaje se toma como monto directo (compatibilidad)
                     if (item.base_token && contexto[item.base_token] === undefined) {
                         faltantes.push(item);
                         continue;
@@ -85,7 +81,6 @@ export default function Liquidacion({ params }) {
                     contexto[item.token] = val;
                     resultados[item.id] = val;
                 } else if (item.tipo === 'FORMULA') {
-                    // Validar si tenemos todos los tokens que necesita esta fórmula
                     const tokensNecesarios = item.formula.match(/[A-Z]+/g) || [];
                     const todosResueltos = tokensNecesarios.every(t => contexto[t] !== undefined);
 
@@ -116,25 +111,26 @@ export default function Liquidacion({ params }) {
         recalcular(nuevosItems);
     };
 
+    const guardarBorradorSilencioso = async () => {
+        await api.put(`/liquidaciones/${id}/borrador`, {
+            items,
+            resultados: valoresCalculados
+        });
+    };
+
     const guardarBorrador = async () => {
         try {
-            await api.put(`/liquidaciones/${id}/borrador`, {
-                items,
-                resultados: valoresCalculados
-            });
+            await guardarBorradorSilencioso();
             alert('Borrador guardado correctamente.');
         } catch {
             alert('Error al guardar el borrador.');
         }
     };
+
     const handleImprimirRecibo = async () => {
-        console.log("holaaa")
         try {
-            // 1. Llamamos al nuevo endpoint del backend para traer los datos organizados
             const res = await api.get(`/liquidaciones/${id}/recibo`);
             setDatosRecibo(res.data);
-
-            // 2. Disparamos la impresión una vez que React haya actualizado el estado
             setTimeout(() => {
                 triggerPrint();
             }, 100);
@@ -147,9 +143,31 @@ export default function Liquidacion({ params }) {
         contentRef: reciboRef,
         documentTitle: `Recibo_${id}`,
     });
+
     if (!liquidacion) return <div>Cargando...</div>;
 
-    const totales = calcularTotales(items, valoresCalculados);
+    // --- CÁLCULO DE TOTALES ACTUALIZADO ---
+    const calcularTotalesNuevos = () => {
+        let remunerativos = 0;
+        let noRemunerativos = 0;
+        let descuentos = 0;
+        let informativos = 0;
+
+        items.forEach(item => {
+            if (!item.activo) return;
+            const val = valoresCalculados[item.id] || 0;
+
+            if (item.naturaleza === 'SUMA') remunerativos += val;
+            if (item.naturaleza === 'NO_REMUNERATIVO') noRemunerativos += val;
+            if (item.naturaleza === 'RESTA') descuentos += val;
+            if (item.naturaleza === 'INFORMATIVO') informativos += val;
+        });
+
+        const neto = (remunerativos + noRemunerativos) - descuentos;
+        return { remunerativos, noRemunerativos, descuentos, informativos, neto };
+    };
+
+    const totales = calcularTotalesNuevos();
     const sueldoBasicoItem = items.find(i => i.token === 'SB');
 
     return (
@@ -235,8 +253,12 @@ export default function Liquidacion({ params }) {
 
             <div className="totales-liq">
                 <div className="total-fila">
-                    <span>Sueldo Bruto:</span>
-                    <strong>$ {totales.bruto.toFixed(2)}</strong>
+                    <span>Remunerativos:</span>
+                    <strong>$ {totales.remunerativos.toFixed(2)}</strong>
+                </div>
+                <div className="total-fila">
+                    <span>No Remunerativos:</span>
+                    <strong>$ {totales.noRemunerativos.toFixed(2)}</strong>
                 </div>
                 <div className="total-fila">
                     <span>Descuentos:</span>
@@ -244,7 +266,7 @@ export default function Liquidacion({ params }) {
                 </div>
                 {totales.informativos > 0 && (
                     <div className="total-fila">
-                        <span>Informativos:</span>
+                        <span>Costos Empleador (Informativos):</span>
                         <strong>$ {totales.informativos.toFixed(2)}</strong>
                     </div>
                 )}
@@ -281,7 +303,7 @@ export default function Liquidacion({ params }) {
                     onClose={() => setMostrarModalCopiar(false)}
                     onExito={() => {
                         setMostrarModalCopiar(false);
-                        cargarLiquidacion(); // Recarga los datos actualizados
+                        cargarLiquidacion(); 
                     }}
                 />
             )}
