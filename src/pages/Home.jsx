@@ -11,6 +11,9 @@ export default function Home() {
                 <Link to="/items">
                     <button className="btn-secundario">⚙️ Configuración Global de Items</button>
                 </Link>
+                <Link to="/categorias">
+                    <button className="btn-secundario" style={{ marginLeft: '10px' }}>📊 Gestión de Categorías</button>
+                </Link>
             </div>
         </div>
     );

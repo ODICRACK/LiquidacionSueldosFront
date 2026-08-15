@@ -61,6 +61,9 @@ export default function Items() {
                                 )}
                             </td>
                             <td>
+                                <Link to={`/item/editar/${item.id}`}>
+                                    <button className="btn-accion" style={{ marginRight: '10px' }}>Editar</button>
+                                </Link>
                                 <button className="btn-peligro" onClick={() => eliminarItem(item.id)}>Eliminar</button>
                             </td>
                         </tr>

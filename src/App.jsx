@@ -9,6 +9,7 @@ import EmpleadoForm from './pages/EmpleadoForm';
 import Liquidacion from './pages/Liquidacion';
 import Items from './pages/Items';
 import ItemForm from './pages/ItemForm';
+import Categorias from "./pages/Categorias"
 
 // Componente para proteger rutas
 const ProtectedRoute = ({ component: Component, ...rest }) => {
@@ -42,6 +43,20 @@ function App() {
             <Route path="/clientes"><ProtectedRoute component={Clientes} /></Route>
             <Route path="/cliente/nuevo"><ProtectedRoute component={ClienteForm} /></Route>
             
+            {/* NUEVA RUTA: Edición de Cliente */}
+            <Route path="/cliente/editar/:id">
+                {params => <ProtectedRoute component={ClienteForm} params={params} />}
+            </Route>
+            
+            <Route path="/empleado/nuevo/:cliente_id">
+                {params => <ProtectedRoute component={EmpleadoForm} params={params} />}
+            </Route>
+
+            {/* NUEVA RUTA: Edición de Empleado */}
+            <Route path="/empleado/editar/:id">
+                {params => <ProtectedRoute component={EmpleadoForm} params={params} />}
+            </Route>
+
             <Route path="/empleado/nuevo/:cliente_id">
                 {params => <ProtectedRoute component={EmpleadoForm} params={params} />}
             </Route>
@@ -52,6 +67,8 @@ function App() {
 
             <Route path="/items"><ProtectedRoute component={Items} /></Route>
             <Route path="/item/nuevo"><ProtectedRoute component={ItemForm} /></Route>
+            <Route path="/categorias"><ProtectedRoute component={Categorias} /></Route>
+            <Route path="/item/editar/:id">{params => <ProtectedRoute component={ItemForm} params={params} />}</Route>
             
             <Route>
                 <div style={{ textAlign: 'center', marginTop: '50px' }}>

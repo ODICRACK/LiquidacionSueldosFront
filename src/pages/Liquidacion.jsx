@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import { redondear, calcularFormula, calcularTotales } from '../utils/mathEngine';
 import { abrirReciboPDF } from '../utils/recibo';
+import { useReactToPrint } from 'react-to-print';
+import { ReciboPrint } from '../components/ReciboPrint';
 import ModalCopiar from '../components/ModalCopiar';
 
 export default function Liquidacion({ params }) {
@@ -10,6 +12,8 @@ export default function Liquidacion({ params }) {
     const [liquidacion, setLiquidacion] = useState(null);
     const [items, setItems] = useState([]);
     const [valoresCalculados, setValoresCalculados] = useState({});
+    const [datosRecibo, setDatosRecibo] = useState(null);
+    const reciboRef = useRef();
 
     useEffect(() => {
         cargarLiquidacion();
@@ -123,7 +127,26 @@ export default function Liquidacion({ params }) {
             alert('Error al guardar el borrador.');
         }
     };
+    const handleImprimirRecibo = async () => {
+        console.log("holaaa")
+        try {
+            // 1. Llamamos al nuevo endpoint del backend para traer los datos organizados
+            const res = await api.get(`/liquidaciones/${id}/recibo`);
+            setDatosRecibo(res.data);
 
+            // 2. Disparamos la impresión una vez que React haya actualizado el estado
+            setTimeout(() => {
+                triggerPrint();
+            }, 100);
+        } catch (error) {
+            alert('Error al obtener los datos para el recibo.');
+        }
+    };
+
+    const triggerPrint = useReactToPrint({
+        contentRef: reciboRef,
+        documentTitle: `Recibo_${id}`,
+    });
     if (!liquidacion) return <div>Cargando...</div>;
 
     const totales = calcularTotales(items, valoresCalculados);
@@ -246,8 +269,8 @@ export default function Liquidacion({ params }) {
             )}
             {liquidacion.estado === 'FINALIZADA' && (
                 <div className="acciones-liq">
-                    <button className="btn-primario" onClick={manejarGeneracionPDF}>
-                        🖨️ Ver / Imprimir Recibo
+                    <button className="btn-primario" onClick={handleImprimirRecibo}>
+                        🖨️ Ver / Imprimir Recibo (PDF)
                     </button>
                 </div>
             )}
@@ -262,6 +285,9 @@ export default function Liquidacion({ params }) {
                     }}
                 />
             )}
+            <div style={{ position: 'absolute', top: '-10000px', left: '-10000px' }}>
+                <ReciboPrint ref={reciboRef} data={datosRecibo} />
+            </div>
         </div>
     );
 }

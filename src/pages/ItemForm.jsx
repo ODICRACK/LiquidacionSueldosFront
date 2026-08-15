@@ -2,22 +2,46 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import api from '../services/api';
 
-export default function ItemForm() {
+export default function ItemForm({ params }) {
+    const id = params?.id;
     const [form, setForm] = useState({
         nombre: '', token: '', tipo: 'PORCENTAJE', naturaleza: 'SUMA', formula: '', porcentaje: '', base_token: ''
     });
     const [categoriasDisponibles, setCategoriasDisponibles] = useState([]);
     const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState([]); // [{ id, operacion }]
-    const [itemsDisponibles, setItemsDisponibles] = useState([]); // Para el selector de base_token
+    const [itemsDisponibles, setItemsDisponibles] = useState([]);
     const [error, setError] = useState(null);
     const [, setLocation] = useLocation();
 
     useEffect(() => {
-        // Cargar las categorías existentes para que el usuario las asigne
-        api.get('/categorias').then(res => setCategoriasDisponibles(res.data)).catch(console.error);
-        // Cargar los items existentes para poder elegir la base del porcentaje
+        // Cargar combos
+        api.get('/categorias').then(res => setCategoriasDisponibles(res.data.filter(c => !c.eliminado))).catch(console.error);
         api.get('/items').then(res => setItemsDisponibles(res.data)).catch(console.error);
-    }, []);
+
+        // Si hay ID, cargar datos del item a editar
+        if (id) {
+            api.get(`/items/${id}`).then(res => {
+                const data = res.data;
+                setForm({
+                    nombre: data.nombre,
+                    token: data.token,
+                    tipo: data.tipo,
+                    naturaleza: data.naturaleza,
+                    formula: data.formula || '',
+                    porcentaje: data.porcentaje || '',
+                    base_token: data.base_token || ''
+                });
+                
+                // Mapear categorías del formato de BD al del state
+                if (data.categorias) {
+                    setCategoriasSeleccionadas(data.categorias.map(c => ({
+                        id: c.categoria_id,
+                        operacion: c.operacion
+                    })));
+                }
+            }).catch(() => alert('Error al cargar el item'));
+        }
+    }, [id]);
 
     const handleCategoriaToggle = (catId) => {
         const existe = categoriasSeleccionadas.find(c => c.id === catId);
@@ -40,14 +64,17 @@ export default function ItemForm() {
         try {
             const payload = { ...form, token: form.token.toUpperCase(), categorias: categoriasSeleccionadas };
             
-            // Limpiar datos que no correspondan al tipo según Regla 24
             if (payload.tipo !== 'PORCENTAJE') {
                 payload.porcentaje = null;
                 payload.base_token = null;
             }
             if (payload.tipo !== 'FORMULA') payload.formula = null;
 
-            await api.post('/items', payload);
+            if (id) {
+                await api.put(`/items/${id}`, payload);
+            } else {
+                await api.post('/items', payload);
+            }
             setLocation('/items');
         } catch (err) {
             setError(err.response?.data?.error || 'Error al guardar el item');
@@ -56,7 +83,7 @@ export default function ItemForm() {
 
     return (
         <div className="formulario-contenedor">
-            <h2>Configuración de Item</h2>
+            <h2>{id ? 'Editar Item' : 'Configuración de Item'}</h2>
             {error && <div className="error-message">{error}</div>}
             
             <form onSubmit={handleSubmit}>
@@ -67,7 +94,12 @@ export default function ItemForm() {
                 
                 <div className="form-group">
                     <label>Token Único (ej: JUB, SB)</label>
-                    <input required value={form.token} onChange={e => setForm({...form, token: e.target.value.toUpperCase()})} />
+                    <input 
+                        required 
+                        value={form.token} 
+                        onChange={e => setForm({...form, token: e.target.value.toUpperCase()})}
+                        disabled={id && form.token === 'SB'} // Bloquear si es el Sueldo Básico
+                    />
                 </div>
 
                 <div className="form-row">
@@ -85,6 +117,7 @@ export default function ItemForm() {
                             <option value="SUMA">Suma (Remunerativo)</option>
                             <option value="RESTA">Resta (Descuento)</option>
                             <option value="INFORMATIVO">Informativo</option>
+                            <option value="AUXILIAR">Auxiliar (Solo para fórmulas, no imprime)</option>
                         </select>
                     </div>
                 </div>
@@ -122,19 +155,19 @@ export default function ItemForm() {
                     </div>
                 )}
 
-                <div className="form-group">
+                <div className="form-group" style={{ marginTop: '20px' }}>
                     <label>Asignación a Categorías (Gráfico)</label>
                     <div className="categorias-lista">
                         {categoriasDisponibles.map(cat => {
                             const seleccionada = categoriasSeleccionadas.find(c => c.id === cat.id);
                             return (
-                                <div key={cat.id} className="categoria-item">
+                                <div key={cat.id} className="categoria-item" style={{ marginBottom: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
                                     <label>
                                         <input type="checkbox" checked={!!seleccionada} onChange={() => handleCategoriaToggle(cat.id)} />
-                                        {cat.nombre}
+                                        {' '}{cat.nombre}
                                     </label>
                                     {seleccionada && (
-                                        <select value={seleccionada.operacion} onChange={e => handleOperacionChange(cat.id, e.target.value)}>
+                                        <select value={seleccionada.operacion} onChange={e => handleOperacionChange(cat.id, e.target.value)} style={{ padding: '2px', fontSize: '0.85rem' }}>
                                             <option value="SUMA">Suma a categoría</option>
                                             <option value="RESTA">Resta a categoría</option>
                                         </select>
@@ -146,7 +179,8 @@ export default function ItemForm() {
                 </div>
 
                 <div className="acciones-form">
-                    <button type="submit" className="btn-guardar">Guardar Item</button>
+                    <button type="button" onClick={() => setLocation('/items')} className="btn-cancelar">Cancelar</button>
+                    <button type="submit" className="btn-guardar">{id ? 'Actualizar Item' : 'Guardar Item'}</button>
                 </div>
             </form>
         </div>
