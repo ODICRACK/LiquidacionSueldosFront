@@ -215,11 +215,27 @@ export default function Liquidacion({ params }) {
             alert('Error al guardar el borrador.');
         }
     };
+    const handleSincronizarNuevos = async () => {
+        if (!window.confirm('¿Buscar y agregar nuevos conceptos creados en el sistema maestro?')) return;
+        try {
+            // Guardamos el progreso actual para no perderlo
+            await guardarBorradorSilencioso();
+            // Llamamos a la sincronización
+            await api.put(`/liquidaciones/${id}/sincronizar`);
+            // Recargamos la pantalla para mostrar los nuevos ítems
+            cargarLiquidacion(); 
+            alert('Sincronización completada. Los nuevos ítems han sido agregados al final de sus categorías.');
+        } catch (error) {
+            alert(error.response?.data?.error || 'Error al sincronizar.');
+        }
+    };
 
     const handleImprimirRecibo = async () => {
         try {
-            // MAGIA: Guardamos el borrador silenciosamente ANTES de pedir el recibo
-            await guardarBorradorSilencioso();
+            // MAGIA CONDICIONAL: Solo auto-guardamos si es un borrador editable
+            if (liquidacion.estado === 'BORRADOR') {
+                await guardarBorradorSilencioso();
+            }
 
             const res = await api.get(`/liquidaciones/${id}/recibo`);
             setDatosRecibo(res.data);
@@ -390,6 +406,9 @@ export default function Liquidacion({ params }) {
                 <div className="acciones-liq">
                     <button className="btn-secundario" onClick={handleImprimirRecibo}>
                         Vista Previa del Recibo
+                    </button>
+                    <button className="btn-secundario" onClick={handleSincronizarNuevos} style={{backgroundColor: '#e0f7fa', borderColor: '#00acc1', color: '#006064'}}>
+                        Sincronizar Nuevos Conceptos
                     </button>
                     <button className="btn-secundario" onClick={() => setMostrarModalCopiar(true)}>
                         Copiar Configuración
