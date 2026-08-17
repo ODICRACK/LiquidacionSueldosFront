@@ -48,9 +48,19 @@ export default function Liquidacion({ params }) {
     const cargarLiquidacion = async () => {
         try {
             const res = await api.get(`/liquidaciones/${id}`);
-            setLiquidacion(res.data);
-            setItems(res.data.items);
-            recalcular(res.data.items);
+            const data = res.data;
+            let itemsCargados = data.items;
+
+            // AUTO-RELLENO DE CALIDAD DE VIDA: 
+            // Si el ítem SB está vacío, le inyectamos el sueldo guardado del empleado
+            const idxSB = itemsCargados.findIndex(i => i.token === 'SB');
+            if (idxSB !== -1 && !itemsCargados[idxSB].valor_ingresado && data.sueldo_basico) {
+                itemsCargados[idxSB].valor_ingresado = data.sueldo_basico;
+            }
+
+            setLiquidacion(data);
+            setItems(itemsCargados);
+            recalcular(itemsCargados);
         } catch (error) {
             console.error('Error al cargar liquidación', error);
         }
@@ -208,6 +218,9 @@ export default function Liquidacion({ params }) {
 
     const handleImprimirRecibo = async () => {
         try {
+            // MAGIA: Guardamos el borrador silenciosamente ANTES de pedir el recibo
+            await guardarBorradorSilencioso();
+
             const res = await api.get(`/liquidaciones/${id}/recibo`);
             setDatosRecibo(res.data);
             setTimeout(() => {
@@ -308,7 +321,7 @@ export default function Liquidacion({ params }) {
                                         </td>
                                         <td title={`Token: ${item.token}`}>
                                             <strong>{item.nombre}</strong>
-                                            <small className="token-hint" style={{display: 'block', color: '#666', fontSize: '0.85em'}}> ({item.token})</small>
+                                            <small className="token-hint" style={{ display: 'block', color: '#666', fontSize: '0.85em' }}> ({item.token})</small>
                                         </td>
                                         <td>{item.naturaleza}</td>
                                         <td>

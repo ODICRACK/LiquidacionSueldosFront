@@ -6,7 +6,7 @@ export default function ItemForm({ params }) {
     const id = params?.id;
     const [form, setForm] = useState({
         nombre: '', token: '', tipo: 'PORCENTAJE', naturaleza: 'SUMA', formula: '', porcentaje: '', base_token: '',
-        unidad_imprimible: '', base_imprimible: '' // <-- NUEVOS CAMPOS
+        unidad_imprimible: '', base_imprimible: '', orden: '' // <-- AÑADIMOS EL CAMPO ORDEN AQUÍ
     });
     const [categoriasDisponibles, setCategoriasDisponibles] = useState([]);
     const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState([]);
@@ -30,7 +30,8 @@ export default function ItemForm({ params }) {
                     porcentaje: data.porcentaje || '',
                     base_token: data.base_token || '',
                     unidad_imprimible: data.unidad_imprimible || '',
-                    base_imprimible: data.base_imprimible || ''
+                    base_imprimible: data.base_imprimible || '',
+                    orden: data.orden !== null && data.orden !== undefined ? data.orden : '' // <-- CARGAMOS EL ORDEN
                 });
 
                 if (data.categorias) {
@@ -62,7 +63,9 @@ export default function ItemForm({ params }) {
         e.preventDefault();
         setError(null);
         try {
-            const payload = { ...form, token: form.token.toUpperCase(), categorias: categoriasSeleccionadas };
+            // Aseguramos que el orden sea un número o nulo antes de enviar
+            const ordenLimpio = form.orden === '' || form.orden === null ? null : parseFloat(form.orden);
+            const payload = { ...form, token: form.token.toUpperCase(), categorias: categoriasSeleccionadas, orden: ordenLimpio };
 
             if (payload.tipo !== 'PORCENTAJE') {
                 payload.porcentaje = null;
@@ -115,11 +118,22 @@ export default function ItemForm({ params }) {
                         <label>Naturaleza (Total)</label>
                         <select value={form.naturaleza} onChange={e => setForm({ ...form, naturaleza: e.target.value })}>
                             <option value="SUMA">Suma (Remunerativo)</option>
-                            <option value="NO_REMUNERATIVO">Suma (No Remunerativo)</option> {/* NUEVA OPCIÓN */}
+                            <option value="NO_REMUNERATIVO">Suma (No Remunerativo)</option>
                             <option value="RESTA">Resta (Descuento)</option>
                             <option value="INFORMATIVO">Informativo</option>
                             <option value="AUXILIAR">Auxiliar (Solo para fórmulas)</option>
                         </select>
+                    </div>
+                    <div className="form-group">
+                        <label>Orden de aparición</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            value={form.orden}
+                            onChange={e => setForm({ ...form, orden: e.target.value })}
+                            placeholder="Dejar vacío para el final"
+                            style={{ width: "auto", maxWidth: "11vw" }}
+                        />
                     </div>
                 </div>
 
@@ -134,8 +148,6 @@ export default function ItemForm({ params }) {
                                 <label>Item Base (se calcula sobre el valor de este token)</label>
                                 <select value={form.base_token} onChange={e => setForm({ ...form, base_token: e.target.value })} required>
                                     <option value="">— Seleccionar base —</option>
-
-                                    {/* GRUPO 1: Variables Globales del Sistema */}
                                     <optgroup label="Variables Globales del Sistema">
                                         <option value="TOTAL_REMUNERATIVO">TOTAL_REMUNERATIVO — Suma de Haberes</option>
                                         <option value="TOTAL_NO_REM">TOTAL_NO_REM — Suma No Remunerativos</option>
@@ -143,8 +155,6 @@ export default function ItemForm({ params }) {
                                         <option value="TOTAL_DESCUENTOS">TOTAL_DESCUENTOS — Suma de Retenciones</option>
                                         <option value="TOTAL_NETO">TOTAL_NETO — Sueldo de Bolsillo</option>
                                     </optgroup>
-
-                                    {/* GRUPO 2: Conceptos Creados por el Usuario */}
                                     <optgroup label="Conceptos Creados">
                                         {itemsDisponibles
                                             .filter(i => i.token !== form.token.toUpperCase())
@@ -171,14 +181,11 @@ export default function ItemForm({ params }) {
                             required
                         />
 
-                        {/* PANEL DE TOKENS CLICKEABLES */}
                         <div className="panel-tokens" style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '5px', border: '1px solid #ddd' }}>
                             <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '8px' }}>
                                 Tokens disponibles (clic para insertar):
                             </span>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '150px', overflowY: 'auto' }}>
-
-                                {/* Variables Globales */}
                                 <button type="button" onClick={() => setForm({ ...form, formula: form.formula + 'TOTAL_REMUNERATIVO' })} className="btn-token" title="Suma de Haberes">TOTAL_REMUNERATIVO</button>
                                 <button type="button" onClick={() => setForm({ ...form, formula: form.formula + 'TOTAL_NO_REM' })} className="btn-token" title="Suma No Remunerativos">TOTAL_NO_REM</button>
                                 <button type="button" onClick={() => setForm({ ...form, formula: form.formula + 'TOTAL_BRUTO' })} className="btn-token" title="Sueldo Bruto Total">TOTAL_BRUTO</button>
@@ -186,7 +193,6 @@ export default function ItemForm({ params }) {
                                 <button type="button" onClick={() => setForm({ ...form, formula: form.formula + 'TOTAL_NETO' })} className="btn-token" title="Sueldo de Bolsillo">TOTAL_NETO</button>
                                 <button type="button" onClick={() => setForm({ ...form, formula: form.formula + 'ANIOS_ANTIGUEDAD' })} className="btn-token" title="Años de Antigüedad">ANIOS_ANTIGUEDAD</button>
 
-                                {/* Tokens de los ítems ya creados */}
                                 {itemsDisponibles.filter(i => i.token !== form.token.toUpperCase()).map(i => (
                                     <button
                                         key={i.id}
@@ -203,7 +209,6 @@ export default function ItemForm({ params }) {
                     </div>
                 )}
 
-                {/* NUEVA SECCIÓN: CONFIGURACIÓN VISUAL PDF */}
                 <div style={{ marginTop: '30px', padding: '15px', backgroundColor: '#f8f9fa', border: '1px solid #ddd', borderRadius: '5px' }}>
                     <h4 style={{ marginTop: 0, marginBottom: '15px', color: '#1a3b8a' }}>Configuración Visual para el PDF</h4>
                     <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '15px' }}>
@@ -257,17 +262,6 @@ export default function ItemForm({ params }) {
                     <button type="submit" className="btn-guardar">{id ? 'Actualizar Item' : 'Guardar Item'}</button>
                 </div>
             </form>
-            <datalist id="lista-tokens">
-                <option value="TOTAL_REMUNERATIVO">Suma de Haberes</option>
-                <option value="TOTAL_NO_REM">Suma No Remunerativos</option>
-                <option value="TOTAL_BRUTO">Sueldo Bruto Total</option>
-                <option value="TOTAL_DESCUENTOS">Suma de Retenciones</option>
-                <option value="TOTAL_NETO">Sueldo de Bolsillo</option>
-                <option value="ANIOS_ANTIGUEDAD">Años de Antigüedad</option>
-                {itemsDisponibles.map(i => (
-                    <option key={i.token} value={i.token}>{i.nombre}</option>
-                ))}
-            </datalist>
         </div>
     );
 }
