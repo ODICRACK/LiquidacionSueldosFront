@@ -655,3 +655,8 @@ input:focus, select:focus {
 }
 
 .mt-2 { margin-top: 20px; }
+
+.modal-copiar-contenido { /* O la clase que envuelva el centro de tu modal */
+    max-height: 70vh;
+    overflow-y: auto;
+}

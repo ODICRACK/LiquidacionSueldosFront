@@ -78,7 +78,7 @@ export const calcularFormula = (formula, contextoValores) => {
 
     // Reemplazar los tokens por sus valores en el contexto
     let formulaConValores = formula;
-    const tokensUtilizados = formula.match(/[A-Z]+/g) || [];
+    const tokensUtilizados = formula.match(/[A-Z_]+/g) || [];
 
     for (const token of tokensUtilizados) {
         const valor = contextoValores[token] || 0;

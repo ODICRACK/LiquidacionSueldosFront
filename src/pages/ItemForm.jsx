@@ -9,7 +9,7 @@ export default function ItemForm({ params }) {
         unidad_imprimible: '', base_imprimible: '' // <-- NUEVOS CAMPOS
     });
     const [categoriasDisponibles, setCategoriasDisponibles] = useState([]);
-    const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState([]); 
+    const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState([]);
     const [itemsDisponibles, setItemsDisponibles] = useState([]);
     const [error, setError] = useState(null);
     const [, setLocation] = useLocation();
@@ -32,7 +32,7 @@ export default function ItemForm({ params }) {
                     unidad_imprimible: data.unidad_imprimible || '',
                     base_imprimible: data.base_imprimible || ''
                 });
-                
+
                 if (data.categorias) {
                     setCategoriasSeleccionadas(data.categorias.map(c => ({
                         id: c.categoria_id,
@@ -53,7 +53,7 @@ export default function ItemForm({ params }) {
     };
 
     const handleOperacionChange = (catId, operacion) => {
-        setCategoriasSeleccionadas(categoriasSeleccionadas.map(c => 
+        setCategoriasSeleccionadas(categoriasSeleccionadas.map(c =>
             c.id === catId ? { ...c, operacion } : c
         ));
     };
@@ -63,7 +63,7 @@ export default function ItemForm({ params }) {
         setError(null);
         try {
             const payload = { ...form, token: form.token.toUpperCase(), categorias: categoriasSeleccionadas };
-            
+
             if (payload.tipo !== 'PORCENTAJE') {
                 payload.porcentaje = null;
                 payload.base_token = null;
@@ -85,27 +85,27 @@ export default function ItemForm({ params }) {
         <div className="formulario-contenedor">
             <h2>{id ? 'Editar Item' : 'Configuración de Item'}</h2>
             {error && <div className="error-message">{error}</div>}
-            
+
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
                     <label>Nombre del Concepto</label>
-                    <input required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} />
+                    <input required value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} />
                 </div>
-                
+
                 <div className="form-group">
                     <label>Token Único (ej: JUB, SB)</label>
-                    <input 
-                        required 
-                        value={form.token} 
-                        onChange={e => setForm({...form, token: e.target.value.toUpperCase()})}
-                        disabled={id && form.token === 'SB'} 
+                    <input
+                        required
+                        value={form.token}
+                        onChange={e => setForm({ ...form, token: e.target.value.toUpperCase() })}
+                        disabled={id && form.token === 'SB'}
                     />
                 </div>
 
                 <div className="form-row">
                     <div className="form-group">
                         <label>Tipo</label>
-                        <select value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}>
+                        <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })}>
                             <option value="PORCENTAJE">Porcentaje</option>
                             <option value="FORMULA">Fórmula</option>
                             <option value="MANUAL">Manual</option>
@@ -113,7 +113,7 @@ export default function ItemForm({ params }) {
                     </div>
                     <div className="form-group">
                         <label>Naturaleza (Total)</label>
-                        <select value={form.naturaleza} onChange={e => setForm({...form, naturaleza: e.target.value})}>
+                        <select value={form.naturaleza} onChange={e => setForm({ ...form, naturaleza: e.target.value })}>
                             <option value="SUMA">Suma (Remunerativo)</option>
                             <option value="NO_REMUNERATIVO">Suma (No Remunerativo)</option> {/* NUEVA OPCIÓN */}
                             <option value="RESTA">Resta (Descuento)</option>
@@ -128,19 +128,32 @@ export default function ItemForm({ params }) {
                         <div className="form-row">
                             <div className="form-group">
                                 <label>Porcentaje Predeterminado (%)</label>
-                                <input type="number" step="0.01" value={form.porcentaje} onChange={e => setForm({...form, porcentaje: e.target.value})} required />
+                                <input type="number" step="0.01" value={form.porcentaje} onChange={e => setForm({ ...form, porcentaje: e.target.value })} required />
                             </div>
                             <div className="form-group">
                                 <label>Item Base (se calcula sobre el valor de este token)</label>
-                                <select value={form.base_token} onChange={e => setForm({...form, base_token: e.target.value})} required>
+                                <select value={form.base_token} onChange={e => setForm({ ...form, base_token: e.target.value })} required>
                                     <option value="">— Seleccionar base —</option>
-                                    {itemsDisponibles
-                                        .filter(i => i.token !== form.token.toUpperCase())
-                                        .map(i => (
-                                            <option key={i.id} value={i.token}>
-                                                {i.token} — {i.nombre}
-                                            </option>
-                                        ))}
+
+                                    {/* GRUPO 1: Variables Globales del Sistema */}
+                                    <optgroup label="Variables Globales del Sistema">
+                                        <option value="TOTAL_REMUNERATIVO">TOTAL_REMUNERATIVO — Suma de Haberes</option>
+                                        <option value="TOTAL_NO_REM">TOTAL_NO_REM — Suma No Remunerativos</option>
+                                        <option value="TOTAL_BRUTO">TOTAL_BRUTO — Remunerativo + No Remunerativo</option>
+                                        <option value="TOTAL_DESCUENTOS">TOTAL_DESCUENTOS — Suma de Retenciones</option>
+                                        <option value="TOTAL_NETO">TOTAL_NETO — Sueldo de Bolsillo</option>
+                                    </optgroup>
+
+                                    {/* GRUPO 2: Conceptos Creados por el Usuario */}
+                                    <optgroup label="Conceptos Creados">
+                                        {itemsDisponibles
+                                            .filter(i => i.token !== form.token.toUpperCase())
+                                            .map(i => (
+                                                <option key={i.id} value={i.token}>
+                                                    {i.token} — {i.nombre}
+                                                </option>
+                                            ))}
+                                    </optgroup>
                                 </select>
                             </div>
                         </div>
@@ -149,9 +162,44 @@ export default function ItemForm({ params }) {
 
                 {form.tipo === 'FORMULA' && (
                     <div className="form-group">
-                        <label>Fórmula Matemática (use Tokens)</label>
-                        <input value={form.formula} onChange={e => setForm({...form, formula: e.target.value.toUpperCase()})} required placeholder="Ej: SB / 30 * DT" />
-                        <small>Operadores permitidos: + - * / % ( )</small>
+                        <label>Fórmula Matemática</label>
+                        <input
+                            type="text"
+                            value={form.formula}
+                            onChange={e => setForm({ ...form, formula: e.target.value.toUpperCase() })}
+                            placeholder="Ej: (SB / 30) * CANT_DIAS"
+                            required
+                        />
+
+                        {/* PANEL DE TOKENS CLICKEABLES */}
+                        <div className="panel-tokens" style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '5px', border: '1px solid #ddd' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '8px' }}>
+                                Tokens disponibles (clic para insertar):
+                            </span>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '150px', overflowY: 'auto' }}>
+
+                                {/* Variables Globales */}
+                                <button type="button" onClick={() => setForm({ ...form, formula: form.formula + 'TOTAL_REMUNERATIVO' })} className="btn-token" title="Suma de Haberes">TOTAL_REMUNERATIVO</button>
+                                <button type="button" onClick={() => setForm({ ...form, formula: form.formula + 'TOTAL_NO_REM' })} className="btn-token" title="Suma No Remunerativos">TOTAL_NO_REM</button>
+                                <button type="button" onClick={() => setForm({ ...form, formula: form.formula + 'TOTAL_BRUTO' })} className="btn-token" title="Sueldo Bruto Total">TOTAL_BRUTO</button>
+                                <button type="button" onClick={() => setForm({ ...form, formula: form.formula + 'TOTAL_DESCUENTOS' })} className="btn-token" title="Suma de Retenciones">TOTAL_DESCUENTOS</button>
+                                <button type="button" onClick={() => setForm({ ...form, formula: form.formula + 'TOTAL_NETO' })} className="btn-token" title="Sueldo de Bolsillo">TOTAL_NETO</button>
+                                <button type="button" onClick={() => setForm({ ...form, formula: form.formula + 'ANIOS_ANTIGUEDAD' })} className="btn-token" title="Años de Antigüedad">ANIOS_ANTIGUEDAD</button>
+
+                                {/* Tokens de los ítems ya creados */}
+                                {itemsDisponibles.filter(i => i.token !== form.token.toUpperCase()).map(i => (
+                                    <button
+                                        key={i.id}
+                                        type="button"
+                                        onClick={() => setForm({ ...form, formula: (form.formula || '') + i.token })}
+                                        style={{ fontSize: '11px', padding: '4px 8px', cursor: 'pointer', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: '#fff' }}
+                                        title={i.nombre}
+                                    >
+                                        <strong>{i.token}</strong> <span style={{ color: '#888' }}>({i.nombre})</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 )}
 
@@ -164,18 +212,18 @@ export default function ItemForm({ params }) {
                     <div className="form-row">
                         <div className="form-group">
                             <label>Columna "UNIDAD"</label>
-                            <input 
-                                value={form.unidad_imprimible} 
-                                onChange={e => setForm({...form, unidad_imprimible: e.target.value})} 
-                                placeholder="Ej: 11% , 30 , o token DIAS_TRAB" 
+                            <input
+                                value={form.unidad_imprimible}
+                                onChange={e => setForm({ ...form, unidad_imprimible: e.target.value })}
+                                placeholder="Ej: 11% , 30 , o token DIAS_TRAB"
                             />
                         </div>
                         <div className="form-group">
                             <label>Columna "BASE"</label>
-                            <input 
-                                value={form.base_imprimible} 
-                                onChange={e => setForm({...form, base_imprimible: e.target.value})} 
-                                placeholder="Ej: token SBRUTO" 
+                            <input
+                                value={form.base_imprimible}
+                                onChange={e => setForm({ ...form, base_imprimible: e.target.value })}
+                                placeholder="Ej: token SBRUTO"
                             />
                         </div>
                     </div>
@@ -209,6 +257,17 @@ export default function ItemForm({ params }) {
                     <button type="submit" className="btn-guardar">{id ? 'Actualizar Item' : 'Guardar Item'}</button>
                 </div>
             </form>
+            <datalist id="lista-tokens">
+                <option value="TOTAL_REMUNERATIVO">Suma de Haberes</option>
+                <option value="TOTAL_NO_REM">Suma No Remunerativos</option>
+                <option value="TOTAL_BRUTO">Sueldo Bruto Total</option>
+                <option value="TOTAL_DESCUENTOS">Suma de Retenciones</option>
+                <option value="TOTAL_NETO">Sueldo de Bolsillo</option>
+                <option value="ANIOS_ANTIGUEDAD">Años de Antigüedad</option>
+                {itemsDisponibles.map(i => (
+                    <option key={i.token} value={i.token}>{i.nombre}</option>
+                ))}
+            </datalist>
         </div>
     );
 }

@@ -83,9 +83,9 @@ export const ReciboPrint = React.forwardRef(({ data }, ref) => {
 
             {/* Bloque 1: Encabezado Empresa */}
             <div style={{ border: '2px solid #000', padding: '8px 12px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase' }}>
-                <div style={{ fontSize: '14px' }}>EMPRESA<br />{empresa.razon_social}</div>
+                <div style={{ fontSize: '14px' }}>{empresa.razon_social}</div>
                 <div>{empresa.domicilio ? `${empresa.domicilio} - ` : ''}Tierra del Fuego e Islas del Atlántico Sur</div>
-                <div>C.U.I.T. EMPRESA: {empresa.cuit}</div>
+                <div>C.U.I.T. {empresa.cuit}</div>
             </div>
 
             {/* Bloque 2: Datos Generales de la Liquidación */}
@@ -147,10 +147,12 @@ export const ReciboPrint = React.forwardRef(({ data }, ref) => {
             </table>
 
             {/* Bloque 4: Encabezado Sueldo Bruto */}
-            <div style={{ background: colorAzulOscuro, color: '#fff', textAlign: 'center', padding: '4px 10px', fontWeight: 'bold', border: '2px solid #000', borderTop: 'none', borderBottom: 'none', fontSize: '12px' }}>
-                COMPOSICIÓN SALARIAL
+            <div style={{ background: colorAzulOscuro, color: '#fff', display: 'flex', justifyContent: 'space-between', padding: '4px 10px', fontWeight: 'bold', border: '2px solid #000', borderTop: 'none', borderBottom: 'none', fontSize: '12px' }}>
+                <span style={{ flexGrow: 1, textAlign: 'center' }}>COMPOSICIÓN SALARIAL</span>
+                <span style={{ float: 'right', fontWeight: 'normal' }}>
+                    Total Bruto: $ {(totales.bruto + totales.no_remunerativo).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </span>
             </div>
-
             {/* Bloque Principal de Conceptos (Remunerativos, No Remunerativos y Descuentos) */}
             <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid #000', borderTop: 'none' }}>
                 <thead>

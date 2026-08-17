@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import { redondear, calcularFormula } from '../utils/mathEngine';
 import { abrirReciboPDF } from '../utils/recibo';
@@ -25,13 +25,21 @@ export default function Liquidacion({ params }) {
     };
 
     const handleFinalizar = async () => {
+        // --- NUEVA BARRERA DE SEGURIDAD ---
+        const itemJornada = items.find(i => i.token === 'JHORAS');
+        if (itemJornada && (!itemJornada.valor_ingresado || parseFloat(itemJornada.valor_ingresado) === 0)) {
+            alert('¡Atención! Debe ingresar la Jornada de Horas (JHORAS) antes de finalizar. Si es jornada completa, ingrese 8.');
+            return;
+        }
+        // -----------------------------------
+
         if (!window.confirm('¿Está seguro de finalizar? La liquidación quedará congelada y no podrá modificarse.')) return;
 
         try {
             await guardarBorradorSilencioso();
             await api.put(`/liquidaciones/${id}/finalizar`);
             alert('Liquidación finalizada correctamente.');
-            cargarLiquidacion(); 
+            cargarLiquidacion();
         } catch (error) {
             alert(error.response?.data?.error || 'Error al finalizar.');
         }
@@ -48,54 +56,125 @@ export default function Liquidacion({ params }) {
         }
     };
 
+    // --- MOTOR DE CÁLCULO POR FASES CON LOS 5 GLOBALES SOLICITADOS ---
+    // --- MOTOR DE CÁLCULO POR FASES ESTRICTAS (BASADO EN NATURALEZA) ---
     const recalcular = (itemsActuales) => {
         const contexto = {};
         const resultados = {};
-        let itemsPendientes = [...itemsActuales];
 
-        let iteraciones = 0;
-        const MAX_ITERACIONES = itemsActuales.length * 2;
+        // 0. PRIORIDAD MÁXIMA: Variables de Tiempo (Antigüedad)
+        let aniosAntiguedad = 0;
+        if (liquidacion?.fecha_ingreso) {
+            const ingreso = new Date(liquidacion.fecha_ingreso);
+            aniosAntiguedad = liquidacion.anio - ingreso.getFullYear();
+            if (liquidacion.mes < ingreso.getMonth() + 1) {
+                aniosAntiguedad--;
+            }
+            aniosAntiguedad = Math.max(0, aniosAntiguedad);
+        }
+        contexto['ANIOS_ANTIGUEDAD'] = aniosAntiguedad;
 
-        while (itemsPendientes.length > 0 && iteraciones < MAX_ITERACIONES) {
-            const faltantes = [];
+        // Función interna para resolver fórmulas de un grupo específico
+        const resolverLote = (loteItems) => {
+            let pendientes = [...loteItems];
+            let iteraciones = 0;
+            const MAX_ITERACIONES = loteItems.length * 2;
 
-            for (const item of itemsPendientes) {
-                if (!item.activo) {
-                    contexto[item.token] = 0;
-                    resultados[item.id] = 0;
-                    continue;
-                }
+            while (pendientes.length > 0 && iteraciones < MAX_ITERACIONES) {
+                const faltantes = [];
 
-                if (item.tipo === 'MANUAL') {
-                    const val = redondear(parseFloat(item.valor_ingresado) || 0);
-                    contexto[item.token] = val;
-                    resultados[item.id] = val;
-                } else if (item.tipo === 'PORCENTAJE') {
-                    if (item.base_token && contexto[item.base_token] === undefined) {
-                        faltantes.push(item);
+                for (const item of pendientes) {
+                    if (!item.activo) {
+                        contexto[item.token] = 0;
+                        resultados[item.id] = 0;
                         continue;
                     }
-                    const porcentaje = parseFloat(item.porcentaje) || 0;
-                    const base = item.base_token ? (contexto[item.base_token] || 0) : 100;
-                    const val = redondear(porcentaje * base / 100);
-                    contexto[item.token] = val;
-                    resultados[item.id] = val;
-                } else if (item.tipo === 'FORMULA') {
-                    const tokensNecesarios = item.formula.match(/[A-Z]+/g) || [];
-                    const todosResueltos = tokensNecesarios.every(t => contexto[t] !== undefined);
 
-                    if (todosResueltos) {
-                        const val = calcularFormula(item.formula, contexto);
+                    if (item.tipo === 'MANUAL') {
+                        const val = redondear(parseFloat(item.valor_ingresado) || 0);
                         contexto[item.token] = val;
                         resultados[item.id] = val;
-                    } else {
-                        faltantes.push(item);
+                    } else if (item.tipo === 'PORCENTAJE') {
+                        if (item.base_token && contexto[item.base_token] === undefined) {
+                            faltantes.push(item);
+                            continue;
+                        }
+                        const porcentaje = parseFloat(item.porcentaje) || 0;
+                        const base = item.base_token ? (contexto[item.base_token] || 0) : 100;
+                        const val = redondear(porcentaje * base / 100);
+                        contexto[item.token] = val;
+                        resultados[item.id] = val;
+                    } else if (item.tipo === 'FORMULA') {
+                        const tokensNecesarios = item.formula.match(/[A-Z_]+/g) || [];
+                        const todosResueltos = tokensNecesarios.every(t => contexto[t] !== undefined);
+
+                        if (todosResueltos) {
+                            const val = calcularFormula(item.formula, contexto);
+                            contexto[item.token] = val;
+                            resultados[item.id] = val;
+                        } else {
+                            faltantes.push(item);
+                        }
                     }
                 }
+                pendientes = faltantes;
+                iteraciones++;
             }
-            itemsPendientes = faltantes;
-            iteraciones++;
-        }
+        };
+
+        // Filtramos por Naturaleza para el orden estricto
+        const auxiliares = itemsActuales.filter(i => i.naturaleza === 'AUXILIAR');
+        const sumas = itemsActuales.filter(i => i.naturaleza === 'SUMA');
+        const noRemunerativos = itemsActuales.filter(i => i.naturaleza === 'NO_REMUNERATIVO');
+        const restas = itemsActuales.filter(i => i.naturaleza === 'RESTA');
+        const informativos = itemsActuales.filter(i => i.naturaleza === 'INFORMATIVO');
+
+        // --- FASE 1: AUXILIARES Y HABERES BASE ---
+        resolverLote(auxiliares);
+
+        // Calculamos solo los haberes que NO dependen de totales globales (Sueldo, Antigüedad, Presentismo)
+        const sumasBase = sumas.filter(i => !i.formula?.includes('TOTAL_') && !i.base_token?.includes('TOTAL_'));
+        resolverLote(sumasBase);
+
+        // --- FASE 2: HABERES DEPENDIENTES (Horas Extras, Feriados) ---
+        // Generamos un "Remunerativo Parcial" (Remuneración Normal y Habitual)
+        let remParcial = 0;
+        sumasBase.forEach(i => { if (i.activo) remParcial += (resultados[i.id] || 0) });
+
+        // Engañamos temporalmente a la fórmula de las extras pasándole la suma base
+        contexto['TOTAL_REMUNERATIVO'] = remParcial;
+
+        const sumasDependientes = sumas.filter(i => i.formula?.includes('TOTAL_') || i.base_token?.includes('TOTAL_'));
+        resolverLote(sumasDependientes);
+
+        // --- FASE 3: NO REMUNERATIVOS ---
+        resolverLote(noRemunerativos);
+
+        // --- FASE 4: CONGELAMIENTO DE BRUTOS ---
+        // Ahora sí, sumamos TODOS los haberes (Base + Extras de 288mil) para los Descuentos
+        let totalRemFinal = 0;
+        sumas.forEach(i => { if (i.activo) totalRemFinal += (resultados[i.id] || 0) });
+
+        let totalNoRemFinal = 0;
+        noRemunerativos.forEach(i => { if (i.activo) totalNoRemFinal += (resultados[i.id] || 0) });
+
+        // Pisamos los valores globales con los números definitivos y exactos
+        contexto['TOTAL_REMUNERATIVO'] = totalRemFinal;
+        contexto['TOTAL_NO_REM'] = totalNoRemFinal;
+        contexto['TOTAL_BRUTO'] = totalRemFinal + totalNoRemFinal;
+
+        // --- FASE 5: DESCUENTOS (RESTAS) ---
+        // Las retenciones ahora leen el TOTAL_REMUNERATIVO completo.
+        resolverLote(restas);
+
+        // --- FASE 6: CIERRE FINAL E INFORMATIVOS ---
+        let totalDescFinal = 0;
+        restas.forEach(i => { if (i.activo) totalDescFinal += (resultados[i.id] || 0) });
+
+        contexto['TOTAL_DESCUENTOS'] = totalDescFinal;
+        contexto['TOTAL_NETO'] = (totalRemFinal + totalNoRemFinal) - totalDescFinal;
+
+        resolverLote(informativos);
 
         setValoresCalculados(resultados);
     };
@@ -146,7 +225,6 @@ export default function Liquidacion({ params }) {
 
     if (!liquidacion) return <div>Cargando...</div>;
 
-    // --- CÁLCULO DE TOTALES ACTUALIZADO ---
     const calcularTotalesNuevos = () => {
         let remunerativos = 0;
         let noRemunerativos = 0;
@@ -187,6 +265,7 @@ export default function Liquidacion({ params }) {
                             disabled={liquidacion.estado === 'FINALIZADA'}
                             onChange={(e) => handleItemChange(sueldoBasicoItem.id, 'valor_ingresado', e.target.value)}
                             placeholder="0.00"
+                            onWheel={(e) => e.target.blur()}
                         />
                         <small className="base-hint">al guardar el borrador se actualiza en el empleado</small>
                     </div>
@@ -204,50 +283,68 @@ export default function Liquidacion({ params }) {
                     </tr>
                 </thead>
                 <tbody>
-                    {items.filter(i => i.token !== 'SB').map(item => (
-                        <tr key={item.id} className={!item.activo ? 'item-inactivo' : ''}>
-                            <td>
-                                <input
-                                    type="checkbox"
-                                    checked={item.activo}
-                                    disabled={liquidacion.estado === 'FINALIZADA'}
-                                    onChange={(e) => handleItemChange(item.id, 'activo', e.target.checked)}
-                                />
-                            </td>
-                            <td title={`Token: ${item.token}`}>
-                                <strong>{item.nombre}</strong>
-                                <small className="token-hint"> ({item.token})</small>
-                            </td>
-                            <td>{item.naturaleza}</td>
-                            <td>
-                                {item.tipo === 'MANUAL' && (
-                                    <input
-                                        type="number"
-                                        value={item.valor_ingresado || ''}
-                                        disabled={!item.activo || liquidacion.estado === 'FINALIZADA'}
-                                        onChange={(e) => handleItemChange(item.id, 'valor_ingresado', e.target.value)}
-                                        placeholder="0.00"
-                                    />
-                                )}
-                                {item.tipo === 'PORCENTAJE' && (
-                                    <div className="input-grupo">
-                                        <input
-                                            type="number" step="0.01"
-                                            value={item.porcentaje || ''}
-                                            disabled={!item.activo || liquidacion.estado === 'FINALIZADA'}
-                                            onChange={(e) => handleItemChange(item.id, 'porcentaje', e.target.value)}
-                                        />
-                                        <span>%</span>
-                                        {item.base_token && <small className="base-hint">de {item.base_token}</small>}
-                                    </div>
-                                )}
-                                {item.tipo === 'FORMULA' && <span>{item.formula}</span>}
-                            </td>
-                            <td className="resultado-celda">
-                                $ {valoresCalculados[item.id]?.toFixed(2) || '0.00'}
-                            </td>
-                        </tr>
-                    ))}
+                    {/* Agrupamos y ordenamos visualmente */}
+                    {['SUMA', 'NO_REMUNERATIVO', 'RESTA', 'AUXILIAR', 'INFORMATIVO'].map(nat => {
+                        const itemsGrupo = items.filter(i => i.naturaleza === nat && i.token !== 'SB');
+                        if (itemsGrupo.length === 0) return null;
+
+                        return (
+                            <React.Fragment key={nat}>
+                                {/* Cabecera del Grupo */}
+                                <tr className="fila-separador-grupo" style={{ backgroundColor: '#e9ecef', fontWeight: 'bold' }}>
+                                    <td colSpan="5" style={{ padding: '8px', textTransform: 'uppercase' }}>{nat.replace('_', ' ')}</td>
+                                </tr>
+
+                                {/* Ítems del Grupo */}
+                                {itemsGrupo.map(item => (
+                                    <tr key={item.id} style={{ opacity: item.activo ? 1 : 0.4 }}>
+                                        <td>
+                                            <input
+                                                type="checkbox"
+                                                checked={item.activo}
+                                                disabled={liquidacion.estado === 'FINALIZADA'}
+                                                onChange={(e) => handleItemChange(item.id, 'activo', e.target.checked)}
+                                            />
+                                        </td>
+                                        <td title={`Token: ${item.token}`}>
+                                            <strong>{item.nombre}</strong>
+                                            <small className="token-hint" style={{display: 'block', color: '#666', fontSize: '0.85em'}}> ({item.token})</small>
+                                        </td>
+                                        <td>{item.naturaleza}</td>
+                                        <td>
+                                            {item.tipo === 'MANUAL' && (
+                                                <input
+                                                    type="number"
+                                                    value={item.valor_ingresado || ''}
+                                                    disabled={!item.activo || liquidacion.estado === 'FINALIZADA'}
+                                                    onChange={(e) => handleItemChange(item.id, 'valor_ingresado', e.target.value)}
+                                                    placeholder="0.00"
+                                                    onWheel={(e) => e.target.blur()}
+                                                />
+                                            )}
+                                            {item.tipo === 'PORCENTAJE' && (
+                                                <div className="input-grupo">
+                                                    <input
+                                                        type="number" step="0.01"
+                                                        value={item.porcentaje || ''}
+                                                        disabled={!item.activo || liquidacion.estado === 'FINALIZADA'}
+                                                        onChange={(e) => handleItemChange(item.id, 'porcentaje', e.target.value)}
+                                                        onWheel={(e) => e.target.blur()}
+                                                    />
+                                                    <span>%</span>
+                                                    {item.base_token && <small className="base-hint">de {item.base_token}</small>}
+                                                </div>
+                                            )}
+                                            {item.tipo === 'FORMULA' && <span>{item.formula}</span>}
+                                        </td>
+                                        <td className="resultado-celda">
+                                            $ {valoresCalculados[item.id]?.toFixed(2) || '0.00'}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </React.Fragment>
+                        );
+                    })}
                 </tbody>
             </table>
 
@@ -278,6 +375,9 @@ export default function Liquidacion({ params }) {
 
             {liquidacion.estado === 'BORRADOR' && (
                 <div className="acciones-liq">
+                    <button className="btn-secundario" onClick={handleImprimirRecibo}>
+                        Vista Previa del Recibo
+                    </button>
                     <button className="btn-secundario" onClick={() => setMostrarModalCopiar(true)}>
                         Copiar Configuración
                     </button>
@@ -291,6 +391,16 @@ export default function Liquidacion({ params }) {
             )}
             {liquidacion.estado === 'FINALIZADA' && (
                 <div className="acciones-liq">
+                    {liquidacion.estado === 'FINALIZADA' && (
+                        <button className="btn-peligro" onClick={async () => {
+                            if (window.confirm('¿Reabrir esta liquidación? Volverá a ser un borrador editable.')) {
+                                await api.put(`/liquidaciones/${id}/reabrir`);
+                                cargarLiquidacion();
+                            }
+                        }}>
+                            🔓 Reabrir Liquidación
+                        </button>
+                    )}
                     <button className="btn-primario" onClick={handleImprimirRecibo}>
                         🖨️ Ver / Imprimir Recibo (PDF)
                     </button>
@@ -303,7 +413,7 @@ export default function Liquidacion({ params }) {
                     onClose={() => setMostrarModalCopiar(false)}
                     onExito={() => {
                         setMostrarModalCopiar(false);
-                        cargarLiquidacion(); 
+                        cargarLiquidacion();
                     }}
                 />
             )}
