@@ -437,17 +437,33 @@ input:focus, select:focus {
 /* ==========================================================================
    TABLAS
    ========================================================================== */
+/* 1. Contenedor responsivo para pantallas chicas */
+.tabla-responsive-contenedor {
+    width: 100%;
+    overflow-x: auto;
+    /* Para un scroll suave en celulares/tablets */
+    -webkit-overflow-scrolling: touch; 
+}
+
+/* 2. Tu código base mejorado */
 .tabla-datos, .tabla-items-liq {
     width: 100%;
     border-collapse: collapse;
     background: white;
+    min-width: 700px;
+    table-layout: fixed; /* <-- ESTO OBLIGA A LA TABLA A SER RÍGIDA */
 }
 
 .tabla-datos th, .tabla-datos td, 
 .tabla-items-liq th, .tabla-items-liq td {
-    padding: 12px 15px;
+    padding: 10px 8px;
     text-align: left;
     border-bottom: 1px solid var(--color-borde);
+    
+    /* ESTO MANTIENE TODO EN UNA SOLA LÍNEA CON PUNTOS SUSPENSIVOS */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .tabla-datos th, .tabla-items-liq th {
@@ -457,6 +473,19 @@ input:focus, select:focus {
     color: #555;
 }
 
+/* 3. Evitar que los inputs empujen la tabla hacia afuera */
+.tabla-items-liq td input[type="number"],
+.tabla-items-liq td input[type="text"] {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* 4. Distribución inteligente de los anchos de columna */
+.tabla-items-liq th:nth-child(1) { width: 5%; }  /* Checkbox Activo */
+.tabla-items-liq th:nth-child(2) { width: 28%; } /* Concepto */
+.tabla-items-liq th:nth-child(3) { width: 17%; } /* Naturaleza */
+.tabla-items-liq th:nth-child(4) { width: 35%; } /* Fórmula/Input (Necesita más espacio) */
+.tabla-items-liq th:nth-child(5) { width: 15%; } /* Resultado */
 /* ==========================================================================
    VISTA DE LIQUIDACIÓN
    ========================================================================== */

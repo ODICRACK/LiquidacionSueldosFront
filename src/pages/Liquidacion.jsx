@@ -223,7 +223,7 @@ export default function Liquidacion({ params }) {
             // Llamamos a la sincronización
             await api.put(`/liquidaciones/${id}/sincronizar`);
             // Recargamos la pantalla para mostrar los nuevos ítems
-            cargarLiquidacion(); 
+            cargarLiquidacion();
             alert('Sincronización completada. Los nuevos ítems han sido agregados al final de sus categorías.');
         } catch (error) {
             alert(error.response?.data?.error || 'Error al sincronizar.');
@@ -300,83 +300,85 @@ export default function Liquidacion({ params }) {
                     </div>
                 </div>
             )}
+            <div className="tabla-responsive-contenedor">
+                <table className="tabla-items-liq">
+                    <thead>
+                        <tr>
+                            <th>Activo</th>
+                            <th>Concepto</th>
+                            <th>Naturaleza</th>
+                            <th>Valor / Fórmula</th>
+                            <th>Resultado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {/* Agrupamos y ordenamos visualmente */}
+                        {['SUMA', 'NO_REMUNERATIVO', 'RESTA', 'AUXILIAR', 'INFORMATIVO'].map(nat => {
+                            const itemsGrupo = items.filter(i => i.naturaleza === nat && i.token !== 'SB');
+                            if (itemsGrupo.length === 0) return null;
 
-            <table className="tabla-items-liq">
-                <thead>
-                    <tr>
-                        <th>Activo</th>
-                        <th>Concepto</th>
-                        <th>Naturaleza</th>
-                        <th>Valor / Fórmula</th>
-                        <th>Resultado</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {/* Agrupamos y ordenamos visualmente */}
-                    {['SUMA', 'NO_REMUNERATIVO', 'RESTA', 'AUXILIAR', 'INFORMATIVO'].map(nat => {
-                        const itemsGrupo = items.filter(i => i.naturaleza === nat && i.token !== 'SB');
-                        if (itemsGrupo.length === 0) return null;
+                            return (
+                                <React.Fragment key={nat}>
+                                    {/* Cabecera del Grupo */}
+                                    <tr className="fila-separador-grupo" style={{ backgroundColor: '#e9ecef', fontWeight: 'bold' }}>
+                                        <td colSpan="5" style={{ padding: '8px', textTransform: 'uppercase' }}>{nat.replace('_', ' ')}</td>
+                                    </tr>
 
-                        return (
-                            <React.Fragment key={nat}>
-                                {/* Cabecera del Grupo */}
-                                <tr className="fila-separador-grupo" style={{ backgroundColor: '#e9ecef', fontWeight: 'bold' }}>
-                                    <td colSpan="5" style={{ padding: '8px', textTransform: 'uppercase' }}>{nat.replace('_', ' ')}</td>
-                                </tr>
-
-                                {/* Ítems del Grupo */}
-                                {itemsGrupo.map(item => (
-                                    <tr key={item.id} style={{ opacity: item.activo ? 1 : 0.4 }}>
-                                        <td>
-                                            <input
-                                                type="checkbox"
-                                                checked={item.activo}
-                                                disabled={liquidacion.estado === 'FINALIZADA'}
-                                                onChange={(e) => handleItemChange(item.id, 'activo', e.target.checked)}
-                                            />
-                                        </td>
-                                        <td title={`Token: ${item.token}`}>
-                                            <strong>{item.nombre}</strong>
-                                            <small className="token-hint" style={{ display: 'block', color: '#666', fontSize: '0.85em' }}> ({item.token})</small>
-                                        </td>
-                                        <td>{item.naturaleza}</td>
-                                        <td>
-                                            {item.tipo === 'MANUAL' && (
+                                    {/* Ítems del Grupo */}
+                                    {itemsGrupo.map(item => (
+                                        <tr key={item.id} style={{ opacity: item.activo ? 1 : 0.4 }}>
+                                            <td>
                                                 <input
-                                                    type="number"
-                                                    value={item.valor_ingresado || ''}
-                                                    disabled={!item.activo || liquidacion.estado === 'FINALIZADA'}
-                                                    onChange={(e) => handleItemChange(item.id, 'valor_ingresado', e.target.value)}
-                                                    placeholder="0.00"
-                                                    onWheel={(e) => e.target.blur()}
+                                                    type="checkbox"
+                                                    checked={item.activo}
+                                                    disabled={liquidacion.estado === 'FINALIZADA'}
+                                                    onChange={(e) => handleItemChange(item.id, 'activo', e.target.checked)}
                                                 />
-                                            )}
-                                            {item.tipo === 'PORCENTAJE' && (
-                                                <div className="input-grupo">
+                                            </td>
+                                            <td title={`Token: ${item.token}`}>
+                                                <strong>{item.nombre}</strong>
+                                                <small className="token-hint" style={{ display: 'block', color: '#666', fontSize: '0.85em' }}> ({item.token})</small>
+                                            </td>
+                                            <td>{item.naturaleza}</td>
+                                            <td>
+                                                {item.tipo === 'MANUAL' && (
                                                     <input
-                                                        type="number" step="0.01"
-                                                        value={item.porcentaje || ''}
+                                                        type="number"
+                                                        value={item.valor_ingresado || ''}
                                                         disabled={!item.activo || liquidacion.estado === 'FINALIZADA'}
-                                                        onChange={(e) => handleItemChange(item.id, 'porcentaje', e.target.value)}
+                                                        onChange={(e) => handleItemChange(item.id, 'valor_ingresado', e.target.value)}
+                                                        placeholder="0.00"
                                                         onWheel={(e) => e.target.blur()}
                                                     />
-                                                    <span>%</span>
-                                                    {item.base_token && <small className="base-hint">de {item.base_token}</small>}
-                                                </div>
-                                            )}
-                                            {item.tipo === 'FORMULA' && <span>{item.formula}</span>}
-                                        </td>
-                                        <td className="resultado-celda">
-                                            $ {valoresCalculados[item.id]?.toFixed(2) || '0.00'}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </React.Fragment>
-                        );
-                    })}
-                </tbody>
-            </table>
-
+                                                )}
+                                                {item.tipo === 'PORCENTAJE' && (
+                                                    <div className="input-grupo">
+                                                        <input
+                                                            type="number" step="0.01"
+                                                            value={item.porcentaje || ''}
+                                                            disabled={!item.activo || liquidacion.estado === 'FINALIZADA'}
+                                                            onChange={(e) => handleItemChange(item.id, 'porcentaje', e.target.value)}
+                                                            onWheel={(e) => e.target.blur()}
+                                                        />
+                                                        <span>%</span>
+                                                        {item.base_token && <small title={item.base_token} className="base-hint">de {item.base_token}</small>}
+                                                    </div>
+                                                )}
+                                                {item.tipo === 'FORMULA' && (
+                                                    <span title={item.formula}>{item.formula}</span>
+                                                )}
+                                            </td>
+                                            <td className="resultado-celda">
+                                                $ {valoresCalculados[item.id]?.toFixed(2) || '0.00'}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </React.Fragment>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
             <div className="totales-liq">
                 <div className="total-fila">
                     <span>Remunerativos:</span>
@@ -407,7 +409,7 @@ export default function Liquidacion({ params }) {
                     <button className="btn-secundario" onClick={handleImprimirRecibo}>
                         Vista Previa del Recibo
                     </button>
-                    <button className="btn-secundario" onClick={handleSincronizarNuevos} style={{backgroundColor: '#e0f7fa', borderColor: '#00acc1', color: '#006064'}}>
+                    <button className="btn-secundario" onClick={handleSincronizarNuevos} style={{ backgroundColor: '#e0f7fa', borderColor: '#00acc1', color: '#006064' }}>
                         Sincronizar Nuevos Conceptos
                     </button>
                     <button className="btn-secundario" onClick={() => setMostrarModalCopiar(true)}>
