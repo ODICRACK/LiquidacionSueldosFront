@@ -39,79 +39,104 @@ export default function ModalCopiar({ liquidacionActualId, onClose, onExito }) {
     };
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-contenido">
-                <h3>Copiar Configuración</h3>
-                <p>La configuración copiará estados (Activo/Inactivo) y Porcentajes. <strong>No copiará valores manuales.</strong></p>
-
-                <div className="form-group">
-                    <label>Cliente</label>
-                    <select
-                        value={clienteId}
-                        onChange={e => { setClienteId(e.target.value); setEmpleadoId(''); }}
-                    >
-                        <option value="">Seleccione un cliente</option>
-                        {clientes.map(c => (
-                            <option key={c.id} value={c.id}>{c.razon_social} (CUIT {c.cuit})</option>
-                        ))}
-                    </select>
+        <div className="mc-overlay">
+            <div className="mc-dialog">
+                
+                {/* Cabecera */}
+                <div className="mc-header">
+                    <h3 className="mc-title">Copiar Configuración</h3>
+                    <p className="mc-subtitle">
+                        Se clonarán los estados (Activo/Inactivo) y los porcentajes. <strong>No copiará valores manuales.</strong>
+                    </p>
                 </div>
 
-                <div className="form-group">
-                    <label>Empleado</label>
-                    <select
-                        value={empleadoId}
-                        onChange={e => setEmpleadoId(e.target.value)}
-                        disabled={!clienteId}
-                    >
-                        <option value="">Seleccione un empleado</option>
-                        {empleados.map(e => (
-                            <option key={e.id} value={e.id}>{e.apellido}, {e.nombre}</option>
-                        ))}
-                    </select>
-                </div>
+                {/* Cuerpo scrollable */}
+                <div className="mc-body">
+                    <div className="mc-field">
+                        <label className="mc-label">Cliente</label>
+                        <select
+                            className="mc-select"
+                            value={clienteId}
+                            onChange={e => { setClienteId(e.target.value); setEmpleadoId(''); }}
+                        >
+                            <option value="">Seleccione un cliente</option>
+                            {clientes.map(c => (
+                                <option key={c.id} value={c.id}>{c.razon_social} (CUIT {c.cuit})</option>
+                            ))}
+                        </select>
+                    </div>
 
-                {empleadoSeleccionado && (
-                    ultima ? (
-                        <div className="aviso-copia">
-                            <p>
-                                Se copiará de la <strong>última liquidación</strong> de {empleadoSeleccionado.apellido}, {empleadoSeleccionado.nombre}:
-                                <strong> {ultima.mes}/{ultima.anio}</strong> ({ultima.estado}).
+                    <div className="mc-field">
+                        <label className="mc-label">Empleado</label>
+                        <select
+                            className="mc-select"
+                            value={empleadoId}
+                            onChange={e => setEmpleadoId(e.target.value)}
+                            disabled={!clienteId}
+                        >
+                            <option value="">Seleccione un empleado</option>
+                            {empleados.map(e => (
+                                <option key={e.id} value={e.id}>{e.apellido}, {e.nombre}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {empleadoSeleccionado && (
+                        ultima ? (
+                            <div className="mc-featured-card">
+                                <p className="mc-featured-text">
+                                    Se copiará de la <strong>última liquidación</strong> de {empleadoSeleccionado.apellido}, {empleadoSeleccionado.nombre}:
+                                    <strong> {ultima.mes}/{ultima.anio}</strong> ({ultima.estado}).
+                                </p>
+                                <button className="mc-btn mc-btn-primary" onClick={() => aplicarCopia(ultima.id)}>
+                                    Copiar esta configuración
+                                </button>
+                            </div>
+                        ) : (
+                            <p className="mc-subtitle" style={{ marginTop: '20px', fontStyle: 'italic' }}>
+                                Este empleado no tiene liquidaciones anteriores para copiar.
                             </p>
-                            <button className="btn-primario" onClick={() => aplicarCopia(ultima.id)}>Copiar configuración</button>
+                        )
+                    )}
+
+                    {liquidacionesDisponibles.length > 1 && (
+                        <div className="mc-history-section">
+                            <h4 className="mc-history-title">O selecciona un período anterior:</h4>
+                            <div className="mc-table-wrapper">
+                                <table className="mc-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Período</th>
+                                            <th>Estado</th>
+                                            <th style={{ textAlign: 'right' }}>Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {liquidacionesDisponibles.map(liq => (
+                                            <tr key={liq.id}>
+                                                <td><strong>{liq.mes}/{liq.anio}</strong></td>
+                                                <td>{liq.estado}</td>
+                                                <td style={{ textAlign: 'right' }}>
+                                                    <button className="mc-btn mc-btn-outline" onClick={() => aplicarCopia(liq.id)}>
+                                                        Usar esta
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    ) : (
-                        <p>Este empleado no tiene liquidaciones anteriores para copiar.</p>
-                    )
-                )}
+                    )}
+                </div>
 
-                {liquidacionesDisponibles.length > 1 && (
-                    <>
-                        <p className="mt-2">O elegí otra liquidación:</p>
-                        <table className="tabla-datos">
-                            <thead>
-                                <tr>
-                                    <th>Período</th>
-                                    <th>Estado</th>
-                                    <th>Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {liquidacionesDisponibles.map(liq => (
-                                    <tr key={liq.id}>
-                                        <td>{liq.mes}/{liq.anio}</td>
-                                        <td>{liq.estado}</td>
-                                        <td>
-                                            <button className="btn-accion" onClick={() => aplicarCopia(liq.id)}>Usar esta</button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </>
-                )}
-
-                <button className="btn-cancelar mt-2" onClick={onClose}>Cerrar</button>
+                {/* Pie del modal */}
+                <div className="mc-footer">
+                    <button className="mc-btn mc-btn-cancel" onClick={onClose}>
+                        Cerrar
+                    </button>
+                </div>
+                
             </div>
         </div>
     );

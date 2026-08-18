@@ -689,3 +689,217 @@ input:focus, select:focus {
     max-height: 70vh;
     overflow-y: auto;
 }
+/* --- OVERLAY Y CONTENEDOR PRINCIPAL --- */
+.mc-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(3px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.mc-dialog {
+    background: #ffffff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 85vh; /* Evita que supere el alto de la pantalla */
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    overflow: hidden;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* --- CABECERA --- */
+.mc-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #eaeaea;
+}
+
+.mc-title {
+    margin: 0 0 8px 0;
+    color: #1f2937;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.mc-subtitle {
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+/* --- CUERPO DEL MODAL (CON SCROLL) --- */
+.mc-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+/* --- FORMULARIOS --- */
+.mc-field {
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.mc-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+}
+
+.mc-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    color: #1f2937;
+    background-color: #f9fafb;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.mc-select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background-color: #ffffff;
+}
+
+.mc-select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* --- TARJETA DE RECOMENDACIÓN (ÚLTIMA LIQUIDACIÓN) --- */
+.mc-featured-card {
+    background-color: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.mc-featured-text {
+    margin: 0;
+    color: #1e3a8a;
+    font-size: 0.95rem;
+}
+
+.mc-featured-text strong {
+    color: #1d4ed8;
+}
+
+/* --- TABLA DE HISTORIAL --- */
+.mc-history-section {
+    margin-top: 24px;
+}
+
+.mc-history-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #4b5563;
+    margin-bottom: 12px;
+}
+
+.mc-table-wrapper {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.mc-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.875rem;
+}
+
+.mc-table th {
+    background-color: #f3f4f6;
+    color: #374151;
+    font-weight: 600;
+    padding: 10px 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.mc-table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    color: #4b5563;
+    vertical-align: middle;
+}
+
+.mc-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.mc-table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+/* --- PIE DEL MODAL Y BOTONES --- */
+.mc-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #eaeaea;
+    display: flex;
+    justify-content: flex-end;
+    background-color: #f9fafb;
+    border-radius: 0 0 12px 12px;
+}
+
+.mc-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s;
+}
+
+.mc-btn-primary {
+    background-color: #2563eb;
+    color: white;
+}
+
+.mc-btn-primary:hover {
+    background-color: #1d4ed8;
+}
+
+.mc-btn-outline {
+    background-color: transparent;
+    color: #2563eb;
+    border: 1px solid #2563eb;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+}
+
+.mc-btn-outline:hover {
+    background-color: #eff6ff;
+}
+
+.mc-btn-cancel {
+    background-color: white;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+}
+
+.mc-btn-cancel:hover {
+    background-color: #f3f4f6;
+}

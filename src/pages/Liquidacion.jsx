@@ -5,6 +5,7 @@ import { abrirReciboPDF } from '../utils/recibo';
 import { useReactToPrint } from 'react-to-print';
 import { ReciboPrint } from '../components/ReciboPrint';
 import ModalCopiar from '../components/ModalCopiar';
+import { useLocation } from 'wouter';
 
 export default function Liquidacion({ params }) {
     const [mostrarModalCopiar, setMostrarModalCopiar] = useState(false);
@@ -14,7 +15,7 @@ export default function Liquidacion({ params }) {
     const [valoresCalculados, setValoresCalculados] = useState({});
     const [datosRecibo, setDatosRecibo] = useState(null);
     const reciboRef = useRef();
-
+    const [empleadosCompaneros, setEmpleadosCompaneros] = useState([]);
     useEffect(() => {
         cargarLiquidacion();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -51,8 +52,15 @@ export default function Liquidacion({ params }) {
             const data = res.data;
             let itemsCargados = data.items;
 
-            // AUTO-RELLENO DE CALIDAD DE VIDA: 
-            // Si el ítem SB está vacío, le inyectamos el sueldo guardado del empleado
+            // Buscar a los otros empleados del mismo cliente
+            if (data.cliente_id) {
+                const clientesRes = await api.get('/entidades/clientes');
+                const miCliente = clientesRes.data.find(c => c.id === data.cliente_id);
+                if (miCliente) {
+                    setEmpleadosCompaneros(miCliente.empleados.filter(e => !e.eliminado));
+                }
+            }
+
             const idxSB = itemsCargados.findIndex(i => i.token === 'SB');
             if (idxSB !== -1 && !itemsCargados[idxSB].valor_ingresado && data.sueldo_basico) {
                 itemsCargados[idxSB].valor_ingresado = data.sueldo_basico;
@@ -66,6 +74,31 @@ export default function Liquidacion({ params }) {
         }
     };
 
+    const handleCambiarEmpleado = async (nuevoEmpleadoId) => {
+        if (nuevoEmpleadoId == liquidacion.empleado_id) return;
+        
+        // Auto-guardamos por si dejó algo a medias antes de cambiar
+        if (liquidacion.estado === 'BORRADOR') {
+            await guardarBorradorSilencioso();
+        }
+
+        try {
+            // Intentamos crear la liquidación para el mismo mes y año
+            const res = await api.post('/liquidaciones', { 
+                empleado_id: nuevoEmpleadoId, 
+                anio: liquidacion.anio, 
+                mes: liquidacion.mes 
+            });
+            window.location.href = `/liquidacion/${res.data.liquidacion_id}`;
+        } catch (error) {
+            // Si ya existe (Error 409), el backend nos devuelve el ID, así que redirigimos hacia allá
+            if (error.response && error.response.status === 409) {
+                window.location.href = `/liquidacion/${error.response.data.liquidacion_id}`;
+            } else {
+                alert('Error al cambiar de empleado.');
+            }
+        }
+    };
     // --- MOTOR DE CÁLCULO POR FASES CON LOS 5 GLOBALES SOLICITADOS ---
     // --- MOTOR DE CÁLCULO POR FASES ESTRICTAS (BASADO EN NATURALEZA) ---
     const recalcular = (itemsActuales) => {
@@ -199,6 +232,18 @@ export default function Liquidacion({ params }) {
         setItems(nuevosItems);
         recalcular(nuevosItems);
     };
+    // --- NUEVA FUNCIÓN: ACTIVAR/DESACTIVAR TODOS ---
+    const handleToggleAll = (estado) => {
+        const nuevosItems = items.map(item => {
+            // Ignoramos los Auxiliares y el Sueldo Básico
+            if (item.naturaleza === 'AUXILIAR' || item.token === 'SB') {
+                return item;
+            }
+            return { ...item, activo: estado };
+        });
+        setItems(nuevosItems);
+        recalcular(nuevosItems);
+    };
 
     const guardarBorradorSilencioso = async () => {
         await api.put(`/liquidaciones/${id}/borrador`, {
@@ -277,11 +322,31 @@ export default function Liquidacion({ params }) {
     const totales = calcularTotalesNuevos();
     const sueldoBasicoItem = items.find(i => i.token === 'SB');
 
+    // Determinamos si todos los ítems afectables están activos para marcar el checkbox principal
+    const itemsAfectables = items.filter(i => i.naturaleza !== 'AUXILIAR' && i.token !== 'SB');
+    const todosActivos = itemsAfectables.length > 0 && itemsAfectables.every(i => i.activo);
     return (
         <div className="liquidacion-contenedor">
-            <header className="liq-header">
-                <h2>Liquidación: {liquidacion.mes}/{liquidacion.anio}</h2>
-                <span className={`estado-badge ${liquidacion.estado.toLowerCase()}`}>{liquidacion.estado}</span>
+            <header className="liq-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                <div>
+                    <h2 style={{ margin: 0 }}>Liquidación: {liquidacion.mes}/{liquidacion.anio}</h2>
+                    <span className={`estado-badge ${liquidacion.estado.toLowerCase()}`} style={{ marginTop: '5px', display: 'inline-block' }}>{liquidacion.estado}</span>
+                </div>
+                
+                {empleadosCompaneros.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#f8f9fa', padding: '8px 12px', borderRadius: '6px', border: '1px solid #ddd' }}>
+                        <span style={{ fontSize: '0.85rem', color: '#555', fontWeight: 'bold' }}>👤 Empleado:</span>
+                        <select 
+                            value={liquidacion.empleado_id} 
+                            onChange={(e) => handleCambiarEmpleado(e.target.value)}
+                            style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ccc', outline: 'none' }}
+                        >
+                            {empleadosCompaneros.map(emp => (
+                                <option key={emp.id} value={emp.id}>{emp.apellido}, {emp.nombre}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
             </header>
 
             {sueldoBasicoItem && (
@@ -304,7 +369,16 @@ export default function Liquidacion({ params }) {
                 <table className="tabla-items-liq">
                     <thead>
                         <tr>
-                            <th>Activo</th>
+                            <th style={{gap: '8px' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={todosActivos}
+                                    disabled={liquidacion.estado === 'FINALIZADA'}
+                                    onChange={(e) => handleToggleAll(e.target.checked)}
+                                    title="Activar/Desactivar todos (excepto auxiliares)"
+                                    style={{ cursor: 'pointer' }}
+                                />
+                            </th>
                             <th>Concepto</th>
                             <th>Naturaleza</th>
                             <th>Valor / Fórmula</th>

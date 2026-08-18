@@ -39,7 +39,7 @@ const generarAnios = (empleado) => {
 
 export default function Clientes() {
     const [clientes, setClientes] = useState([]);
-    const [expandidos, setExpandidos] = useState({});
+    const [expandidos, setExpandidos] = useState(() => JSON.parse(sessionStorage.getItem('expandidos')) || {});
     const [empleadosExpandidos, setEmpleadosExpandidos] = useState({});
     const [aniosExpandidos, setAniosExpandidos] = useState({});
     const [, setLocation] = useLocation();
@@ -48,6 +48,40 @@ export default function Clientes() {
         cargarClientes();
     }, []);
 
+    useEffect(() => {
+        sessionStorage.setItem('expandidos', JSON.stringify(expandidos));
+    }, [expandidos]);
+
+    // --- NUEVA FUNCIÓN: Restaurar la ubicación (Scroll) ---
+    useEffect(() => {
+        // Solo intentamos scrollear una vez que los clientes ya se descargaron y dibujaron
+        if (clientes.length > 0) {
+            setTimeout(() => {
+                const scrollGuardado = sessionStorage.getItem('scrollClientesPos');
+                if (scrollGuardado) {
+                    window.scrollTo({ top: parseInt(scrollGuardado, 10), behavior: 'instant' });
+                }
+            }, 50); // 50ms de espera para que el DOM termine de acomodar las carpetas expandidas
+        }
+    }, [clientes]);
+
+    // --- NUEVA FUNCIÓN: Guardar la ubicación (Scroll) ---
+    useEffect(() => {
+        let timeoutId;
+        const handleScroll = () => {
+            // Usamos un pequeño delay para no saturar el navegador en cada milímetro de scroll
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                sessionStorage.setItem('scrollClientesPos', window.scrollY);
+            }, 100);
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            clearTimeout(timeoutId);
+        };
+    }, []);
     const cargarClientes = async () => {
         try {
             const res = await api.get('/entidades/clientes');
@@ -79,7 +113,7 @@ export default function Clientes() {
 
     const toggleExpand = (id) => setExpandidos(prev => ({ ...prev, [id]: !prev[id] }));
     const toggleEmpleado = (empleadoId) => setEmpleadosExpandidos(prev => ({ ...prev, [empleadoId]: !prev[empleadoId] }));
-    
+
     const toggleAnio = (empleadoId, anio) => {
         setAniosExpandidos(prev => {
             const actuales = prev[empleadoId] || [];
@@ -142,17 +176,17 @@ export default function Clientes() {
                                         Legajo: {emp.nro_legajo} · CUIL: {emp.cuil}
                                     </span>
                                 </div>
-                                
+
                                 {!inactivos && (
                                     <div style={{ display: 'flex', gap: '8px', zIndex: 2 }}>
-                                        <button 
-                                            className="btn-accion" 
+                                        <button
+                                            className="btn-accion"
                                             onClick={(e) => { e.stopPropagation(); setLocation(`/empleado/editar/${emp.id}`); }}
                                         >
                                             Editar
                                         </button>
-                                        <button 
-                                            className="btn-peligro" 
+                                        <button
+                                            className="btn-peligro"
                                             onClick={(e) => { e.stopPropagation(); handleBajaEmpleado(emp.id, `${emp.nombre} ${emp.apellido}`); }}
                                         >
                                             Baja
