@@ -226,7 +226,28 @@ export const ReciboPrint = React.forwardRef(({ data }, ref) => {
             <div style={{ display: 'flex', marginTop: '30px', borderTop: '2px solid #000', paddingTop: '15px' }}>
                 <div style={{ flex: 1, paddingRight: '20px', fontSize: '10px', color: '#333' }}>
                     <p style={{ fontWeight: 'bold', color: '#000', fontSize: '11px', margin: '0 0 8px 0' }}>Detalle de la composición salarial</p>
-                    <p style={{ margin: 0, lineHeight: '1.4' }}>Nota: Los conceptos detallados en "Costos del Empleador" constituyen aportes patronales y contribuciones que no se descuentan del sueldo del trabajador, exhibiéndose a fines puramente informativos para evidenciar la composición total del costo laboral.</p>
+                    <p style={{ margin: '0 0 10px 0', lineHeight: '1.4' }}>Nota: Los conceptos detallados en "Costos del Empleador" constituyen aportes patronales y contribuciones que no se descuentan del sueldo del trabajador, exhibiéndose a fines puramente informativos para evidenciar la composición total del costo laboral.</p>
+                    
+                    {grafico && grafico.length > 0 && (
+                        <div style={{ marginTop: '15px' }}>
+                            {grafico.map((cat, idx) => (
+                                <div key={idx} style={{ marginBottom: '8px', paddingBottom: '4px', borderBottom: '1px solid #ddd' }}>
+                                    <div style={{ fontWeight: 'bold', fontSize: '11px', color: '#000', display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>{cat.nombre}</span>
+                                        <span>{formatMoney(cat.total)}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: '10px', marginTop: '3px' }}>
+                                        <span>Empleador:</span>
+                                        <span>{formatMoney(cat.empleador)}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: '10px', marginTop: '2px' }}>
+                                        <span>Empleado:</span>
+                                        <span>{formatMoney(cat.empleado)}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
                 <div style={{ width: '280px' }}>
                     {grafico.length > 0 && (
