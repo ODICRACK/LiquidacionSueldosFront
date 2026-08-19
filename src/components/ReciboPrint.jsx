@@ -75,8 +75,52 @@ export const ReciboPrint = React.forwardRef(({ data }, ref) => {
     );
 
     return (
-        <div ref={ref} style={{ padding: '20px 40px', background: '#fff', color: '#000', fontFamily: fontMain, maxWidth: '900px', margin: '0 auto' }}>
-
+        <div ref={ref} className="recibo-container" style={{ padding: '20px 40px', background: '#fff', color: '#000', fontFamily: fontMain, maxWidth: '900px', margin: '0 auto' }}>
+            <style>
+                {`
+                @media print {
+                    @page {
+                        size: A4 portrait;
+                        margin: 5mm;
+                    }
+                    html, body {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        height: 100vh;
+                        overflow: hidden; /* Force 1 page */
+                    }
+                    .recibo-container {
+                        padding: 5px !important;
+                        margin: 0 !important;
+                        max-width: 100% !important;
+                        height: 98vh !important;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: flex-start;
+                        /* The zoom shrinks EVERYTHING proportionally */
+                        zoom: 0.70; 
+                    }
+                    /* Override inline fonts and spacing for extreme compactness */
+                    .recibo-container, .recibo-container * {
+                        line-height: 1.1 !important;
+                    }
+                    .recibo-container td, .recibo-container th {
+                        padding: 2px 4px !important;
+                    }
+                    /* Reduce huge margins in inline styles */
+                    .recibo-container > div[style*="marginTop"] {
+                        margin-top: 10px !important;
+                    }
+                    .recibo-container > div[style*="padding"] {
+                        padding-top: 2px !important;
+                        padding-bottom: 2px !important;
+                    }
+                    .recibo-container table {
+                        margin-bottom: 4px !important;
+                    }
+                }
+                `}
+            </style>
             {/* Título Principal */}
             <div style={{ textAlign: 'center', border: '2px solid #000', borderBottom: 'none', padding: '5px' }}>
                 <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>Recibo de Haberes Ley 20.744</h2>
