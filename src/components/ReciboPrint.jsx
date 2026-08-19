@@ -140,14 +140,14 @@ export const ReciboPrint = React.forwardRef(({ data }, ref) => {
                         <td colSpan={2} style={{ padding: '4px', border: '1px solid #000' }}>MES / AÑO</td>
                         <td colSpan={2} style={{ padding: '4px', border: '1px solid #000' }}>APELLIDO Y NOMBRE</td>
                         <td style={{ padding: '4px', border: '1px solid #000' }}>N° LEGAJO</td>
-                        <td style={{ padding: '4px', border: '1px solid #000' }}>SUELDO BÁSICO</td>
+                        <td style={{ padding: '4px', border: '1px solid #000' }}>SUELDO BRUTO</td>
                         <td style={{ padding: '4px', border: '1px solid #000' }}>ANTIGÜEDAD</td>
                     </tr>
                     <tr style={{ textAlign: 'center', fontWeight: 'bold', background: '#f8f9fa' }}>
                         <td colSpan={2} style={{ padding: '4px', border: '1px solid #000' }}>{liquidacion.mes_anio_impresion}</td>
                         <td colSpan={2} style={{ padding: '4px', border: '1px solid #000', textTransform: 'uppercase' }}>{empleado.nombre_completo}</td>
                         <td style={{ padding: '4px', border: '1px solid #000' }}>{empleado.legajo || '-'}</td>
-                        <td style={{ padding: '4px', border: '1px solid #000' }}>{formatMoney(empleado.sueldo_basico)}</td>
+                        <td style={{ padding: '4px', border: '1px solid #000' }}>{(totales.bruto + totales.no_remunerativo).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
                         <td style={{ padding: '4px', border: '1px solid #000' }}>{calcularAntiguedad()}</td>
                     </tr>
                     <tr style={{ background: colorAzulOscuro, color: '#fff', fontWeight: 'bold', textAlign: 'center' }}>

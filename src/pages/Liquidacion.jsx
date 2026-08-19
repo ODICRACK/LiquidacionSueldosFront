@@ -248,7 +248,8 @@ export default function Liquidacion({ params }) {
     const guardarBorradorSilencioso = async () => {
         await api.put(`/liquidaciones/${id}/borrador`, {
             items,
-            resultados: valoresCalculados
+            resultados: valoresCalculados,
+            fecha_pago_aportes: liquidacion.fecha_pago_aportes
         });
     };
 
@@ -350,18 +351,32 @@ export default function Liquidacion({ params }) {
             </header>
 
             {sueldoBasicoItem && (
-                <div className="sueldo-basico">
-                    <span className="sb-label">Sueldo Básico</span>
-                    <div className="input-grupo">
-                        <input
-                            type="number" step="0.01" min="0"
-                            value={sueldoBasicoItem.valor_ingresado || ''}
-                            disabled={liquidacion.estado === 'FINALIZADA'}
-                            onChange={(e) => handleItemChange(sueldoBasicoItem.id, 'valor_ingresado', e.target.value)}
-                            placeholder="0.00"
-                            onWheel={(e) => e.target.blur()}
-                        />
-                        <small className="base-hint">al guardar el borrador se actualiza en el empleado</small>
+                <div className="sueldo-basico" style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span className="sb-label">Sueldo Básico</span>
+                        <div className="input-grupo">
+                            <input
+                                type="number" step="0.01" min="0"
+                                value={sueldoBasicoItem.valor_ingresado || ''}
+                                disabled={liquidacion.estado === 'FINALIZADA'}
+                                onChange={(e) => handleItemChange(sueldoBasicoItem.id, 'valor_ingresado', e.target.value)}
+                                placeholder="0.00"
+                                onWheel={(e) => e.target.blur()}
+                            />
+                            <small className="base-hint">al guardar el borrador se actualiza en el empleado</small>
+                        </div>
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: '1px solid #ccc', paddingLeft: '20px' }}>
+                        <span className="sb-label">PERÍODO / F. PAGO</span>
+                        <div className="input-grupo">
+                            <input
+                                type="date"
+                                value={liquidacion.fecha_pago_aportes ? liquidacion.fecha_pago_aportes.split('T')[0] : ''}
+                                disabled={liquidacion.estado === 'FINALIZADA'}
+                                onChange={(e) => setLiquidacion({ ...liquidacion, fecha_pago_aportes: e.target.value })}
+                            />
+                            <small className="base-hint">Se mostrará en el recibo de sueldo</small>
+                        </div>
                     </div>
                 </div>
             )}
