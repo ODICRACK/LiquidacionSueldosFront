@@ -162,7 +162,7 @@ export const ReciboPrint = React.forwardRef(({ data }, ref) => {
                         <td colSpan={2} style={{ padding: '4px', border: '1px solid #000' }}>{liquidacion.categoria_laboral}</td>
                         <td style={{ padding: '4px', border: '1px solid #000' }}>{empleado.cuil}</td>
                         <td style={{ padding: '4px', border: '1px solid #000' }}>{liquidacion.banco}</td>
-                        <td style={{ padding: '4px', border: '1px solid #000' }}>{liquidacion.periodo} ({liquidacion.fecha_pago_aportes})</td>
+                        <td style={{ padding: '4px', border: '1px solid #000' }}>{liquidacion.fecha_pago_aportes.split('-').reverse().join('/')}</td>
                     </tr>
                 </tbody>
             </table>
