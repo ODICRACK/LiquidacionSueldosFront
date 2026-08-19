@@ -269,7 +269,7 @@ export default function Liquidacion({ params }) {
             await api.put(`/liquidaciones/${id}/sincronizar`);
             // Recargamos la pantalla para mostrar los nuevos ítems
             cargarLiquidacion();
-            alert('Sincronización completada. Los nuevos ítems han sido agregados al final de sus categorías.');
+            alert('Sincronización completada. Los nuevos ítems fueron agregados y los existentes se actualizaron con la configuración maestra.');
         } catch (error) {
             alert(error.response?.data?.error || 'Error al sincronizar.');
         }
