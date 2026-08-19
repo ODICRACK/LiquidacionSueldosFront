@@ -1,6 +1,7 @@
 import React from 'react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
+import { numeroALetras } from '../utils/numeroALetras';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -211,7 +212,7 @@ export const ReciboPrint = React.forwardRef(({ data }, ref) => {
 
             {/* Sección Inferior: Firmas y Textos Legales */}
             <div style={{ marginTop: '15px', fontSize: '11px' }}>
-                <p>Recibí la suma de: ....................................................................................................................................................................</p>
+                <p>Recibí la suma de pesos: <span style={{ fontWeight: 'bold' }}>{numeroALetras(totales.neto)}</span></p>
                 <p>Depositado en:<br /><i style={{ fontWeight: 'bold' }}>Ushuaia, {new Date().toLocaleDateString('es-AR')}</i></p>
             </div>
 
